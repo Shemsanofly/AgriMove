@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Farmer Profile - {{ farmer.name }} | AgriMove AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+    <div class="profile-container">
+        <header class="profile-header">
+            <div class="container">
+                <a href="/" class="back-link">← Back</a>
+                <div class="profile-hero">
+                    <div class="profile-avatar">
+                        <span class="avatar-icon">🚜</span>
+                    </div>
+                    <div class="profile-info">
+                        <h1>{{ farmer.name }}</h1>
+                        <p class="phone">{{ farmer.phone }}</p>
+                        <div class="rating-stars">
+                            {% for i in range(5) %}
+                                <span class="star {% if i < farmer.rating %}filled{% endif %}">★</span>
+                            {% endfor %}
+                            <span class="rating-text">{{ farmer.rating }} / 5.0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="container profile-main">
+            <section class="profile-grid">
+                <div class="card stat-card">
+                    <h3>Total Requests</h3>
+                    <p class="stat-value">{{ farmer.total_requests }}</p>
+                    <span>All-time shipments</span>
+                </div>
+                <div class="card stat-card">
+                    <h3>Delivered</h3>
+                    <p class="stat-value">{{ farmer.total_delivered }}</p>
+                    <span>Successfully completed</span>
+                </div>
+                <div class="card stat-card">
+                    <h3>Loyalty Points</h3>
+                    <p class="stat-value">{{ farmer.points }}</p>
+                    <span>Earned rewards</span>
+                </div>
+                <div class="card stat-card">
+                    <h3>Member Since</h3>
+                    <p class="stat-value">{{ farmer.member_since.strftime('%b %Y') if farmer.member_since else 'N/A' }}</p>
+                    <span>Active farmer</span>
+                </div>
+            </section>
+
+            <section class="profile-grid" style="grid-template-columns: repeat(2, 1fr); gap: 16px; margin-top: 24px;">
+                <div class="card metric-card">
+                    <h4>Delivery Success Rate</h4>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: {% if farmer.total_requests > 0 %}{{ (farmer.total_delivered / farmer.total_requests * 100)|int }}{% else %}0{% endif %}%"></div>
+                    </div>
+                    <p class="metric-value">{% if farmer.total_requests > 0 %}{{ (farmer.total_delivered / farmer.total_requests * 100)|int }}%{% else %}0%{% endif %}</p>
+                </div>
+
+                <div class="card metric-card">
+                    <h4>Average Order Value</h4>
+                    <p class="metric-value">₵{{ "%.2f"|format(farmer.avg_order_value or 0) }}</p>
+                    <span>Per request</span>
+                </div>
+            </section>
+
+            <section class="card" style="margin-top: 24px;">
+                <div class="table-header">
+                    <h3>Recent Deliveries</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Request</th>
+                                <th>Destination</th>
+                                <th>Driver</th>
+                                <th>Status</th>
+                                <th>Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in requests %}
+                                <tr>
+                                    <td>#{{ req.id }}</td>
+                                    <td>{{ req.pickup_location }} → {{ req.destination }}</td>
+                                    <td>
+                                        <a href="{{ url_for('driver_profile', driver_id=req.driver_id) if req.driver_id else '#' }}" class="driver-link">
+                                            View Driver
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="status-badge status-{{ req.status|lower|replace(' ', '-') }}">
+                                            {{ req.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if req.rating %}
+                                            <span class="rating-inline">
+                                                {% for i in range(5) %}
+                                                    <span class="star {% if i < req.rating %}filled{% endif %}">★</span>
+                                                {% endfor %}
+                                            </span>
+                                        {% else %}
+                                            <span class="muted-text">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <section class="profile-grid" style="grid-template-columns: 1fr; margin-top: 24px;">
+                <div class="card rewards-card">
+                    <h3>🎁 Rewards & Benefits</h3>
+                    <div class="rewards-list">
+                        <div class="reward-item">
+                            <div class="reward-icon">🏆</div>
+                            <div class="reward-text">
+                                <h4>Loyalty Program</h4>
+                                <p>Earn 1 point per delivery. 100 points = ₵10 discount</p>
+                            </div>
+                            <div class="reward-progress">
+                                <span class="points-badge">{{ farmer.points }} points</span>
+                            </div>
+                        </div>
+
+                        <div class="reward-item">
+                            <div class="reward-icon">📊</div>
+                            <div class="reward-text">
+                                <h4>Volume Discounts</h4>
+                                <p>5+ deliveries/month = 5% discount</p>
+                            </div>
+                            <div class="reward-progress">
+                                <span class="badge">Active</span>
+                            </div>
+                        </div>
+
+                        <div class="reward-item">
+                            <div class="reward-icon">⭐</div>
+                            <div class="reward-text">
+                                <h4>Premium Support</h4>
+                                <p>24/7 dedicated support line for farmers</p>
+                            </div>
+                            <div class="reward-progress">
+                                <span class="badge">Included</span>
+                            </div>
+                        </div>
+
+                        <div class="reward-item">
+                            <div class="reward-icon">📱</div>
+                            <div class="reward-text">
+                                <h4>SMS Alerts</h4>
+                                <p>Real-time delivery notifications</p>
+                            </div>
+                            <div class="reward-progress">
+                                <span class="badge">Enabled</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <style>
+        .profile-container {
+            background: var(--bg-light);
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, var(--green), var(--gold));
+            color: var(--white);
+            padding: 40px 0;
+            margin-bottom: 30px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: var(--white);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .profile-hero {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+
+        .profile-info h1 {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+        }
+
+        .rating-stars {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .star {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .star.filled {
+            color: var(--white);
+        }
+
+        .rating-text {
+            font-weight: 600;
+            margin-left: 12px;
+        }
+
+        .profile-main {
+            display: grid;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 18px;
+        }
+
+        .stat-card {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.2rem;
+            color: var(--green);
+            font-weight: 700;
+            margin: 8px 0;
+        }
+
+        .metric-card {
+            padding: 20px;
+        }
+
+        .metric-card h4 {
+            color: var(--dark);
+            margin-bottom: 12px;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: rgba(47, 125, 50, 0.1);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green), var(--gold));
+            transition: width 0.3s ease;
+        }
+
+        .metric-value {
+            font-size: 1.6rem;
+            color: var(--green);
+            font-weight: 700;
+        }
+
+        .rating-inline {
+            display: flex;
+            gap: 2px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table thead {
+            background: rgba(47, 125, 50, 0.08);
+        }
+
+        .data-table th {
+            padding: 12px;
+            text-align: left;
+            color: var(--dark);
+            font-weight: 600;
+            border-bottom: 2px solid rgba(47, 125, 50, 0.2);
+        }
+
+        .data-table td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            color: var(--dark);
+        }
+
+        .driver-link {
+            color: var(--green);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .driver-link:hover {
+            text-decoration: underline;
+        }
+
+        .rewards-card {
+            padding: 24px;
+        }
+
+        .rewards-card h3 {
+            margin-bottom: 20px;
+            color: var(--dark);
+        }
+
+        .rewards-list {
+            display: grid;
+            gap: 16px;
+        }
+
+        .reward-item {
+            display: flex;
+            gap: 16px;
+            padding: 16px;
+            background: rgba(47, 125, 50, 0.05);
+            border-radius: 10px;
+            align-items: center;
+        }
+
+        .reward-icon {
+            font-size: 2rem;
+            flex-shrink: 0;
+        }
+
+        .reward-text {
+            flex: 1;
+        }
+
+        .reward-text h4 {
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .reward-text p {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .reward-progress {
+            flex-shrink: 0;
+        }
+
+        .points-badge {
+            background: var(--green);
+            color: var(--white);
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .badge {
+            background: var(--gold);
+            color: var(--dark);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .profile-hero {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .profile-avatar {
+                width: 80px;
+                height: 80px;
+            }
+
+            .profile-info h1 {
+                font-size: 1.6rem;
+            }
+
+            .stat-value {
+                font-size: 1.6rem;
+            }
+
+            .reward-item {
+                flex-direction: column;
+                text-align: center;
+            }
+        }
+    </style>
+</body>
+</html>

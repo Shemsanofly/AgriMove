@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Help & Support | AgriMove AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+    <div class="help-container">
+        <header class="help-header">
+            <div class="container">
+                <a href="/" class="back-link">← Home</a>
+                <h1>❓ Help & Support Center</h1>
+                <p>Get answers, report issues, and connect with our team</p>
+            </div>
+        </header>
+
+        <main class="container help-main">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search help topics..." />
+                <button class="btn btn-secondary" onclick="searchHelp()">Search</button>
+            </div>
+
+            <section class="card quick-links">
+                <h2>Quick Links</h2>
+                <div class="links-grid">
+                    <a href="#farmers" class="quick-link">🚜 For Farmers</a>
+                    <a href="#drivers" class="quick-link">🚗 For Drivers</a>
+                    <a href="#payment" class="quick-link">💳 Payment Issues</a>
+                    <a href="#technical" class="quick-link">🔧 Technical Help</a>
+                </div>
+            </section>
+
+            <section class="card faq">
+                <h2 id="farmers">🚜 Farmer Guide</h2>
+                <div class="faq-grid">
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">How do I submit a transport request?</h3>
+                        <div class="accordion-content">
+                            <p>1. Navigate to the Farmer Dashboard from the main menu</p>
+                            <p>2. Click "Submit New Request"</p>
+                            <p>3. Fill in pickup location, destination, goods type, and quantity</p>
+                            <p>4. Click "Request Transport" and confirm</p>
+                            <p>5. Our AI will automatically match you with a nearby driver</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">How are drivers assigned to my request?</h3>
+                        <div class="accordion-content">
+                            <p>AgriMove AI uses smart logistics algorithms to match your request with the nearest available driver based on:</p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Driver proximity to pickup location</li>
+                                <li>Driver availability status</li>
+                                <li>Vehicle capacity for your goods</li>
+                                <li>Driver rating and performance</li>
+                            </ul>
+                            <p>Matching usually happens within 5 minutes of request submission.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">What are delivery charges?</h3>
+                        <div class="accordion-content">
+                            <p><strong>Pricing Structure:</strong></p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Base fee: ₵5.00</li>
+                                <li>Distance: ₵2.50 per kilometer</li>
+                                <li>Peak hours surcharge: +20% (6-9 AM, 12-2 PM, 5-7 PM)</li>
+                                <li>Tax: +5% on total</li>
+                            </ul>
+                            <p>You can see the exact quote before confirming your request.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">How do I track my delivery?</h3>
+                        <div class="accordion-content">
+                            <p>1. Go to Farmer Dashboard → View Requests</p>
+                            <p>2. Find your delivery and click "Track Delivery"</p>
+                            <p>3. See real-time driver location and ETA</p>
+                            <p>4. Get SMS notifications at each stage (Accepted, In Transit, Delivered)</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card faq">
+                <h2 id="drivers">🚗 Driver Guide</h2>
+                <div class="faq-grid">
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">How do I accept delivery jobs?</h3>
+                        <div class="accordion-content">
+                            <p>1. Go to Driver Dashboard</p>
+                            <p>2. View available requests in the "Open Requests" section</p>
+                            <p>3. Review destination, goods type, and estimated earnings</p>
+                            <p>4. Click "Accept Job" to accept the delivery</p>
+                            <p>5. Click "Start Delivery" when ready to pick up</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">How do I toggle my availability?</h3>
+                        <div class="accordion-content">
+                            <p>1. In Driver Dashboard, click the availability toggle button</p>
+                            <p>2. "Available" - You can receive new delivery requests</p>
+                            <p>3. "Busy" - You cannot receive new requests (automatically set when you accept a job)</p>
+                            <p>4. Toggle resets automatically when you complete a delivery</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">How are my earnings calculated?</h3>
+                        <div class="accordion-content">
+                            <p>Earnings = Base fare + Distance charge - Platform fee (2%)</p>
+                            <p><strong>Example:</strong></p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Base: ₵5.00</li>
+                                <li>Distance (20 km): ₵50.00</li>
+                                <li>Subtotal: ₵55.00</li>
+                                <li>Platform fee (2%): ₵1.10</li>
+                                <li><strong>Your earning: ₵53.90</strong></li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">How do ratings affect me?</h3>
+                        <div class="accordion-content">
+                            <p>Ratings are crucial for driver success on AgriMove AI:</p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>4.8+ rating: Unlock premium jobs and surge pricing</li>
+                                <li>Below 4.0: May limit new delivery requests</li>
+                                <li>Consistent delivery and professionalism improve ratings</li>
+                            </ul>
+                            <p>You can improve ratings by:</p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Delivering on time</li>
+                                <li>Taking care of goods</li>
+                                <li>Being professional with farmers</li>
+                                <li>Following navigation instructions</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card faq">
+                <h2 id="payment">💳 Payment & Billing</h2>
+                <div class="faq-grid">
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">What payment methods are accepted?</h3>
+                        <div class="accordion-content">
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>💳 Visa / Mastercard</li>
+                                <li>📱 Mobile Money (MTN, Vodafone, Airteltigo)</li>
+                                <li>🏦 Bank Transfer</li>
+                                <li>💰 PayPal</li>
+                                <li>🤝 Cash on Delivery (COD) in select areas</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">When is payment due?</h3>
+                        <div class="accordion-content">
+                            <p><strong>For Farmers:</strong> Payment is due immediately after delivery confirmation</p>
+                            <p><strong>For Drivers:</strong> Earnings are processed within 24 hours to your registered bank account or mobile wallet</p>
+                            <p>Invoices and receipts are generated automatically for all transactions.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">Can I get a refund?</h3>
+                        <div class="accordion-content">
+                            <p><strong>Refund Policy:</strong></p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Cancel before driver accepts: Full refund</li>
+                                <li>Cancel after driver accepts: 50% refund (if within 5 minutes)</li>
+                                <li>Cancel after pickup: No refund (delivery will proceed)</li>
+                                <li>Non-delivery disputes: Reviewed within 24 hours</li>
+                            </ul>
+                            <p>Contact support with invoice number and reason for refund request.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">How do I access invoices?</h3>
+                        <div class="accordion-content">
+                            <p>1. Go to your Dashboard → Completed Deliveries</p>
+                            <p>2. Click on any delivery to view details</p>
+                            <p>3. Click "View Invoice" to see itemized charges</p>
+                            <p>4. Use "Print" or "Download PDF" for records</p>
+                            <p>All invoices are also emailed automatically after delivery completion.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card faq">
+                <h2 id="technical">🔧 Technical Support</h2>
+                <div class="faq-grid">
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">The app is running slow or freezing</h3>
+                        <div class="accordion-content">
+                            <p><strong>Try these steps:</strong></p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Refresh the page (Ctrl+R or Cmd+R)</li>
+                                <li>Clear browser cache and cookies</li>
+                                <li>Check internet connection speed</li>
+                                <li>Try a different browser (Chrome, Firefox, Safari)</li>
+                                <li>Disable browser extensions temporarily</li>
+                            </ul>
+                            <p>If problem persists, contact support with your browser and device info.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">I'm not receiving SMS notifications</h3>
+                        <div class="accordion-content">
+                            <p><strong>Troubleshooting:</strong></p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Verify phone number in your profile settings</li>
+                                <li>Check spam/junk SMS folder</li>
+                                <li>Ensure notifications are enabled in settings</li>
+                                <li>Check if your phone number is in correct format (+233...)</li>
+                                <li>Contact your telecom provider to check for SMS blocks</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">GPS tracking shows wrong location</h3>
+                        <div class="accordion-content">
+                            <p><strong>For drivers:</strong></p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Enable location services on your phone</li>
+                                <li>Grant AgriMove permission to access location</li>
+                                <li>Ensure GPS is turned on</li>
+                                <li>Wait 2-3 seconds for GPS to acquire signal</li>
+                                <li>Refresh the tracking page</li>
+                            </ul>
+                            <p>Note: GPS accuracy varies by location and can have 5-50m margin of error.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-accordion">
+                        <h3 onclick="toggleAccordion(this)">I can't log in or reset password</h3>
+                        <div class="accordion-content">
+                            <p><strong>Steps to resolve:</strong></p>
+                            <ul style="margin: 10px 0; padding-left: 20px;">
+                                <li>Click "Forgot Password" on login page</li>
+                                <li>Enter your registered email</li>
+                                <li>Check email for reset link (check spam folder)</li>
+                                <li>Click link and create new password</li>
+                                <li>Try logging in again</li>
+                            </ul>
+                            <p>If still having issues, contact our support team.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card contact-support">
+                <h2>📞 Contact Support</h2>
+                <div class="contact-grid">
+                    <div class="contact-card">
+                        <h3>📧 Email</h3>
+                        <p>support@agrimove.ai</p>
+                        <p class="muted-text">Response within 2 hours</p>
+                    </div>
+                    <div class="contact-card">
+                        <h3>📱 Phone</h3>
+                        <p>+233 555 123 456</p>
+                        <p class="muted-text">Available 24/7</p>
+                    </div>
+                    <div class="contact-card">
+                        <h3>💬 Live Chat</h3>
+                        <p>Chat with us now</p>
+                        <p class="muted-text">Available 9 AM - 8 PM</p>
+                    </div>
+                    <div class="contact-card">
+                        <h3>🐦 Social Media</h3>
+                        <p>@agrimoveai</p>
+                        <p class="muted-text">Facebook, Twitter, Instagram</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <style>
+        .help-container {
+            background: var(--bg-light);
+            min-height: 100vh;
+        }
+
+        .help-header {
+            background: linear-gradient(135deg, var(--green), var(--gold));
+            color: var(--white);
+            padding: 40px 0;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .help-header h1 {
+            font-size: 2.4rem;
+            margin: 12px 0;
+        }
+
+        .back-link {
+            color: var(--white);
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .help-main {
+            display: grid;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .search-box {
+            display: flex;
+            gap: 12px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid rgba(47, 125, 50, 0.2);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .quick-links {
+            padding: 32px;
+        }
+
+        .quick-links h2 {
+            color: var(--dark);
+            margin-bottom: 20px;
+            font-size: 1.8rem;
+        }
+
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 12px;
+        }
+
+        .quick-link {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.1), rgba(242, 193, 78, 0.05));
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+            text-decoration: none;
+            color: var(--dark);
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .quick-link:hover {
+            background: linear-gradient(135deg, var(--green), var(--gold));
+            color: var(--white);
+        }
+
+        .faq {
+            padding: 32px;
+        }
+
+        .faq h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+            font-size: 1.8rem;
+        }
+
+        .faq-grid {
+            display: grid;
+            gap: 12px;
+        }
+
+        .faq-accordion {
+            background: var(--white);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .faq-accordion h3 {
+            background: rgba(47, 125, 50, 0.05);
+            color: var(--dark);
+            padding: 16px;
+            margin: 0;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.3s ease;
+        }
+
+        .faq-accordion h3:hover {
+            background: rgba(47, 125, 50, 0.1);
+        }
+
+        .faq-accordion h3::after {
+            content: "▼";
+            font-size: 0.8rem;
+            transition: transform 0.3s ease;
+        }
+
+        .faq-accordion.active h3::after {
+            transform: rotate(180deg);
+        }
+
+        .accordion-content {
+            display: none;
+            padding: 16px;
+            color: var(--muted);
+            line-height: 1.8;
+        }
+
+        .faq-accordion.active .accordion-content {
+            display: block;
+        }
+
+        .contact-support {
+            padding: 32px;
+        }
+
+        .contact-support h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+            font-size: 1.8rem;
+        }
+
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .contact-card {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.08), rgba(242, 193, 78, 0.05));
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .contact-card h3 {
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .contact-card p {
+            color: var(--dark);
+            margin: 4px 0;
+        }
+
+        @media (max-width: 768px) {
+            .help-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .search-box {
+                flex-direction: column;
+            }
+
+            .faq {
+                padding: 16px;
+            }
+        }
+    </style>
+
+    <script>
+        function toggleAccordion(element) {
+            const accordion = element.parentElement;
+            accordion.classList.toggle('active');
+        }
+
+        function searchHelp() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            if (!query) return;
+            alert('Search for: ' + query + '\n\nFeature coming soon!');
+        }
+    </script>
+</body>
+</html>

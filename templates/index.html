@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgriMove AI | Smart Rural Logistics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  </head>
+  <body>
+    <header class="header" id="home">
+      <nav class="navbar">
+        <div class="container nav-content">
+          <a class="logo" href="#home">AgriMove <span>AI</span></a>
+          <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <div class="nav-links">
+            <a href="{{ url_for('farmer_dashboard') }}">Farmer Dashboard</a>
+            <a href="{{ url_for('market_insights') }}">💡 AI Insights</a>
+            <a href="{{ url_for('ussd_simulator') }}">📱 USSD Simulator</a>
+            <a href="{{ url_for('driver_dashboard') }}">Driver Dashboard</a>
+            <a href="{{ url_for('buyer_marketplace') }}">Buyer Marketplace</a>
+            <a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
+            <a href="{{ url_for('help_page') }}">❓ Help</a>
+          </div>
+        </div>
+      </nav>
+
+      <div class="hero">
+        <div class="container hero-grid">
+          <div class="hero-text reveal">
+            <p class="eyebrow">Smart Rural Logistics</p>
+            <h1>Move harvests faster with AI-powered transport coordination</h1>
+            <p>
+              AgriMove AI connects farmers with trusted drivers, optimizes village routes, and
+              delivers real-time visibility from pickup to market.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="/farmer">Request Transport</a>
+              <a class="btn btn-ghost" href="#features">Explore Features</a>
+            </div>
+            <div class="hero-stats">
+              <div class="stat">
+                <h3>45%</h3>
+                <p>faster delivery cycles</p>
+              </div>
+              <div class="stat">
+                <h3>1,200+</h3>
+                <p>rural drivers onboarded</p>
+              </div>
+              <div class="stat">
+                <h3>98%</h3>
+                <p>market arrival success</p>
+              </div>
+            </div>
+          </div>
+          <div class="hero-visual reveal">
+            <div class="map-card">
+              <div class="map-header">
+                <span>Live Route</span>
+                <strong>Nkasi to Kumasi Market</strong>
+              </div>
+              <div class="map-body">
+                <div class="route-line"></div>
+                <div class="map-points">
+                  <span class="point start"></span>
+                  <span class="point mid"></span>
+                  <span class="point end"></span>
+                </div>
+                <div class="map-legend">
+                  <div><span class="dot green"></span> Farm pickup</div>
+                  <div><span class="dot gold"></span> Collection hub</div>
+                  <div><span class="dot dark"></span> Market</div>
+                </div>
+              </div>
+            </div>
+            <div class="metric-card">
+              <h4>Fleet Availability</h4>
+              <p class="metric">86%</p>
+              <span class="metric-sub">Drivers ready in 20 minutes</span>
+            </div>
+            <div class="metric-card">
+              <h4>Freshness Window</h4>
+              <p class="metric">6h 15m</p>
+              <span class="metric-sub">Optimal arrival forecast</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section id="features" class="section features">
+        <div class="container">
+          <div class="section-header reveal">
+            <h2>Smart features built for rural movement</h2>
+            <p>
+              Every shipment is matched, tracked, and optimized with AI so farmers focus on
+              harvesting while drivers focus on safe delivery.
+            </p>
+          </div>
+          <div class="features-grid">
+            <article class="feature-card reveal">
+              <h3>Smart Transport Matching</h3>
+              <p>Instantly pair farms with nearby vetted drivers and the right vehicle size.</p>
+            </article>
+            <article class="feature-card reveal">
+              <h3>SMS Notifications</h3>
+              <p>Keep farmers informed even with low data connectivity using SMS updates.</p>
+            </article>
+            <article class="feature-card reveal">
+              <h3>Real-Time Tracking</h3>
+              <p>Track shipments from village pickup to market arrival in real time.</p>
+            </article>
+            <article class="feature-card reveal">
+              <h3>AI Route Optimization</h3>
+              <p>Reduce delays with AI-assisted route planning that adapts to road conditions.</p>
+            </article>
+            <article class="feature-card reveal">
+              <h3>Rural Connectivity</h3>
+              <p>Offline-first workflows designed for rural network coverage and power limits.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="about" class="section about">
+        <div class="container about-grid">
+          <div class="about-text reveal">
+            <p class="eyebrow">About AgriMove AI</p>
+            <h2>Empowering farmers with reliable, efficient logistics</h2>
+            <p>
+              AgriMove AI helps rural farmers move produce faster by connecting them to nearby
+              drivers, coordinating routes, and ensuring transparent communication. The platform
+              reduces spoilage, improves market prices, and builds trust across the supply chain.
+            </p>
+            <div class="about-tags">
+              <span>Farmer-first design</span>
+              <span>Trusted driver network</span>
+              <span>Market-ready insights</span>
+            </div>
+          </div>
+          <div class="about-cards reveal">
+            <div class="about-card">
+              <h3>Efficient pickups</h3>
+              <p>Schedule transport in minutes, not hours, with automated matching.</p>
+            </div>
+            <div class="about-card">
+              <h3>Transparent pricing</h3>
+              <p>Clear rates and shared trip visibility help everyone plan better.</p>
+            </div>
+            <div class="about-card">
+              <h3>Community growth</h3>
+              <p>More deliveries mean stronger rural economies and better livelihoods.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="contact" class="section contact">
+        <div class="container contact-grid">
+          <div class="contact-info reveal">
+            <p class="eyebrow">Request transport</p>
+            <h2>Move your harvest with confidence</h2>
+            <p>
+              Share pickup details and our dispatch team will connect you with a driver within
+              minutes.
+            </p>
+            <div class="contact-cards">
+              <div>
+                <h4>Dispatch hotline</h4>
+                <p>+233 555 018 920</p>
+              </div>
+              <div>
+                <h4>Email</h4>
+                <p>dispatch@agrimove.ai</p>
+              </div>
+              <div>
+                <h4>Coverage</h4>
+                <p>Ghana, Kenya, Nigeria, Tanzania</p>
+              </div>
+            </div>
+          </div>
+          <form class="contact-form reveal" id="transportForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="name">Full name</label>
+                <input id="name" name="name" type="text" placeholder="Ama Mensah" required />
+              </div>
+              <div class="form-group">
+                <label for="phone">Phone number</label>
+                <input id="phone" name="phone" type="tel" placeholder="+233..." required />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="location">Pickup location</label>
+                <input id="location" name="location" type="text" placeholder="Village or farm" required />
+              </div>
+              <div class="form-group">
+                <label for="produce">Produce type</label>
+                <input id="produce" name="produce" type="text" placeholder="Tomatoes, maize, cocoa" required />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="details">Delivery notes</label>
+              <textarea id="details" name="details" rows="4" placeholder="Pickup date, quantity, market"></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit">Send request</button>
+            <p class="form-message" id="formMessage" role="status"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-grid">
+        <div>
+          <a class="logo" href="#home">AgriMove <span>AI</span></a>
+          <p>
+            Smart rural logistics built for African agriculture.
+          </p>
+          <div class="socials">
+            <a href="#" aria-label="LinkedIn">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 3a2 2 0 1 1 0 4a2 2 0 0 1 0-4zm1 6h-2v12h2zm4 0h-2v12h2v-6.5c0-1.8 2-2 2 0v6.5h2v-7.5c0-3.2-3.5-3.1-4-1.5z" />
+              </svg>
+            </a>
+            <a href="#" aria-label="X">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 4l7.2 7.7L4 20h3l5.5-6 5.7 6H20l-7.5-8.2L19.5 4h-3l-5 5.6L7 4z" />
+              </svg>
+            </a>
+            <a href="#" aria-label="Instagram">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zm5 5.5A4.5 4.5 0 1 0 16.5 13 4.5 4.5 0 0 0 12 8.5zm6-1.7a1 1 0 1 0 1 1 1 1 0 0 0-1-1z" />
+              </svg>
+            </a>
+          </div>
+        </div>
+        <div class="footer-links">
+          <div>
+            <h4>Quick links</h4>
+            <a href="#features">Features</a>
+            <a href="#about">About</a>
+            <a href="#contact">Contact</a>
+          </div>
+          <div>
+            <h4>Platform</h4>
+            <a href="{{ url_for('help_page') }}">Help Center</a>
+            <a href="{{ url_for('buyer_marketplace') }}">Buyer Marketplace</a>
+          </div>
+          <div>
+            <h4>Support</h4>
+            <a href="{{ url_for('help_page') }}">Support Center</a>
+            <a href="{{ url_for('notifications_hub') }}">Notifications</a>
+            <a href="#contact">Contact Us</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>(c) <span id="year"></span> AgriMove AI. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+  </body>
+</html>

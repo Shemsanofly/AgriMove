@@ -1,0 +1,464 @@
+{% extends "dashboard_base.html" %}
+
+{% block content %}
+  <section class="dashboard-grid">
+    <div class="card stat-card">
+      <h3>Total Requests</h3>
+      <p class="stat-value">{{ counts["Pending"] + counts["Accepted"] + counts["In Transit"] + counts["Delivered"] }}</p>
+      <span>All submissions</span>
+    </div>
+    <div class="card stat-card">
+      <h3>Pending</h3>
+      <p class="stat-value">{{ counts["Pending"] }}</p>
+      <span>Awaiting assignment</span>
+    </div>
+    <div class="card stat-card">
+      <h3>In Transit</h3>
+      <p class="stat-value">{{ counts["In Transit"] }}</p>
+      <span>Active deliveries</span>
+    </div>
+    <div class="card stat-card">
+      <h3>Delivered</h3>
+      <p class="stat-value">{{ counts["Delivered"] }}</p>
+      <span>Completed</span>
+    </div>
+    <div class="card stat-card">
+      <h3>Active Drivers</h3>
+      <p class="stat-value">{{ active_drivers }}</p>
+      <span>Available now</span>
+    </div>
+    <div class="card ai-card">
+      <h3>Fleet Health</h3>
+      <p>{{ ((active_drivers / (drivers|length)) * 100)|int }}% availability</p>
+    </div>
+  </section>
+
+  <!-- Navigation Tabs -->
+  <div class="admin-tabs">
+    <button class="admin-tab-btn active" id="btn-requests-tab" onclick="openAdminTab('requests-tab')">🚚 Transport Requests</button>
+    <button class="admin-tab-btn" id="btn-prices-tab" onclick="openAdminTab('prices-tab')">💰 Market Prices</button>
+    <button class="admin-tab-btn" id="btn-buyers-tab" onclick="openAdminTab('buyers-tab')">🤝 Buyer Verification</button>
+  </div>
+
+  <!-- Tab 1: Requests -->
+  <div id="requests-tab" class="admin-tab-panel active">
+    <section class="dashboard-two">
+      <div class="card search-card">
+        <h3>Quick Search</h3>
+        <input type="text" id="searchInput" placeholder="Search by request ID, farmer, or driver..." class="search-input" />
+        <div class="search-filters">
+          <label>
+            <input type="checkbox" value="Pending" class="status-filter" checked />
+            Pending
+          </label>
+          <label>
+            <input type="checkbox" value="Accepted" class="status-filter" checked />
+            Accepted
+          </label>
+          <label>
+            <input type="checkbox" value="In Transit" class="status-filter" checked />
+            In Transit
+          </label>
+          <label>
+            <input type="checkbox" value="Delivered" class="status-filter" checked />
+            Delivered
+          </label>
+        </div>
+      </div>
+
+      <div class="card theme-card">
+        <h3>Display Settings</h3>
+        <button id="darkModeToggle" class="btn btn-ghost">🌙 Dark Mode</button>
+        <p class="muted-text" style="margin-top: 12px; font-size: 0.85rem;">Toggle dark/light theme for better visibility.</p>
+      </div>
+    </section>
+
+    <section class="card table-card">
+      <div class="table-header">
+        <h3>All Requests</h3>
+        <span>Real-time request management</span>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table" id="requestsTable">
+          <thead>
+            <tr>
+              <th>Request ID</th>
+              <th>Farmer</th>
+              <th>Driver</th>
+              <th>Pickup</th>
+              <th>Destination</th>
+              <th>Goods</th>
+              <th>Status</th>
+              <th>GPS Sim</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if requests %}
+              {% for req in requests %}
+                <tr class="request-row" data-status="{{ req["status"] }}" data-farmer="{{ req["farmer_name"] }}" data-driver="{{ req["driver_name"] or 'Unassigned' }}">
+                  <td>#{{ req["id"] }}</td>
+                  <td>{{ req["farmer_name"] }}</td>
+                  <td>{{ req["driver_name"] if req["driver_name"] else "—" }}</td>
+                  <td>{{ req["pickup_location"] }}</td>
+                  <td>{{ req["destination"] }}</td>
+                  <td>{{ req["goods_type"] }}</td>
+                  <td>
+                    <span class="status-badge status-{{ req["status"]|lower|replace(' ', '-') }}">
+                      {{ req["status"] }}
+                    </span>
+                  </td>
+                  <td>
+                    {% if req["status"] != "Delivered" and req["driver_id"] %}
+                    <button class="btn btn-micro btn-outline btn-gps-sim" data-id="{{ req["id"] }}" onclick="simulateGPSStep(this, {{ req["id"] }})">📍 Move GPS</button>
+                    {% else %}
+                    —
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="8" class="empty-state">No requests yet.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Tab 2: Market Prices -->
+  <div id="prices-tab" class="admin-tab-panel">
+    <section class="dashboard-two">
+      <!-- Add Price Form -->
+      <div class="card form-card">
+        <h3>Add New Crop Price</h3>
+        <form method="post" action="/admin/prices/add" class="dashboard-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="crop_name">Crop Name</label>
+              <input type="text" id="crop_name" name="crop_name" placeholder="e.g. Tomatoes" required />
+            </div>
+            <div class="form-group">
+              <label for="region">Region</label>
+              <input type="text" id="region" name="region" placeholder="e.g. Dodoma" required />
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="price">Price (TZS/bag)</label>
+              <input type="number" id="price" name="price" placeholder="e.g. 145000" required />
+            </div>
+            <div class="form-group">
+              <label for="demand_level">Demand Level</label>
+              <select id="demand_level" name="demand_level">
+                <option value="Low">Low</option>
+                <option value="Medium" selected>Medium</option>
+                <option value="High">High</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="trend">Price Trend</label>
+              <select id="trend" name="trend">
+                <option value="Stable" selected>Stable</option>
+                <option value="Rising">Rising</option>
+                <option value="Falling">Falling</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit">Publish Price</button>
+        </form>
+      </div>
+
+      <div class="card info-card">
+        <h3>Price Guidelines</h3>
+        <p>Market intelligence algorithms rely on these values to suggest destination markets and optimize transport loads.</p>
+        <p style="margin-top: 10px; font-size: 0.85rem; color: var(--muted);">Ensure prices are updated weekly to prevent farm spoilage and ensure buyer credibility.</p>
+      </div>
+    </section>
+
+    <!-- Prices Table -->
+    <section class="card table-card">
+      <div class="table-header">
+        <h3>Current Market Price Records</h3>
+        <span>Add or edit commodity metrics</span>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Crop</th>
+              <th>Region</th>
+              <th>Price (TZS)</th>
+              <th>Demand</th>
+              <th>Trend</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if prices %}
+              {% for p in prices %}
+                <tr>
+                  <td><strong>{{ p.crop_name }}</strong></td>
+                  <td>{{ p.region }}</td>
+                  <td>{{ p.price|int }} TZS</td>
+                  <td>
+                    <span class="status-badge status-{{ p.demand_level|lower }}">
+                      {{ p.demand_level }}
+                    </span>
+                  </td>
+                  <td>
+                    <span class="status-badge status-{{ p.trend|lower|replace(' ', '-') }}">
+                      {{ p.trend }}
+                    </span>
+                  </td>
+                  <td class="table-actions">
+                    <details class="inline-edit">
+                      <summary class="btn btn-micro btn-outline">✏️ Edit</summary>
+                      <form method="post" action="/admin/prices/edit" class="inline-edit-form">
+                        <input type="hidden" name="price_id" value="{{ p.id }}" />
+                        <div class="edit-fields">
+                          <input type="number" name="price" value="{{ p.price|int }}" required />
+                          <select name="demand_level">
+                            <option value="Low" {% if p.demand_level == 'Low' %}selected{% endif %}>Low</option>
+                            <option value="Medium" {% if p.demand_level == 'Medium' %}selected{% endif %}>Medium</option>
+                            <option value="High" {% if p.demand_level == 'High' %}selected{% endif %}>High</option>
+                          </select>
+                          <select name="trend">
+                            <option value="Stable" {% if p.trend == 'Stable' %}selected{% endif %}>Stable</option>
+                            <option value="Rising" {% if p.trend == 'Rising' %}selected{% endif %}>Rising</option>
+                            <option value="Falling" {% if p.trend == 'Falling' %}selected{% endif %}>Falling</option>
+                          </select>
+                          <button type="submit" class="btn btn-micro btn-primary">Save</button>
+                        </div>
+                      </form>
+                    </details>
+                    
+                    <form method="post" action="/admin/prices/delete/{{ p.id }}" style="display:inline;" onsubmit="return confirm('Are you sure you want to delete this market price record?');">
+                      <button type="submit" class="btn btn-micro btn-danger-link" style="color: #c5221f; border:none; background:none; cursor:pointer; font-weight:600;">🗑️ Delete</button>
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" class="empty-state">No price entries found in DB.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <!-- Tab 3: Buyer Verification -->
+  <div id="buyers-tab" class="admin-tab-panel">
+    <section class="card table-card">
+      <div class="table-header">
+        <h3>Trusted Buyers Roster</h3>
+        <span>Verify corporate or merchant buyers to secure fair prices for farmers</span>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Buyer Name</th>
+              <th>Phone</th>
+              <th>Rating</th>
+              <th>Purchases</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if buyers %}
+              {% for b in buyers %}
+                <tr>
+                  <td><strong>{{ b.buyer_name }}</strong></td>
+                  <td>{{ b.phone }}</td>
+                  <td>⭐ {{ b.rating }}</td>
+                  <td>{{ b.total_purchases }} orders</td>
+                  <td>
+                    <span class="status-badge status-{% if b.verification_status == 'Verified' %}accepted{% else %}pending{% endif %}">
+                      {{ b.verification_status }}
+                    </span>
+                  </td>
+                  <td>
+                    <form method="post" action="/admin/buyers/verify/{{ b.id }}" style="display:inline;">
+                      {% if b.verification_status == 'Verified' %}
+                        <input type="hidden" name="status" value="Pending" />
+                        <button type="submit" class="btn btn-micro btn-outline">Revoke</button>
+                      {% else %}
+                        <input type="hidden" name="status" value="Verified" />
+                        <button type="submit" class="btn btn-micro btn-primary">Verify Buyer</button>
+                      {% endif %}
+                    </form>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="6" class="empty-state">No buyers onboarded.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+
+  <section class="dashboard-two">
+    <div class="card table-card">
+      <div class="table-header">
+        <h3>Driver Roster</h3>
+        <span>Fleet availability status</span>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Driver</th>
+              <th>Phone</th>
+              <th>Status</th>
+              <th>Jobs</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for driver in drivers %}
+              {% set job_count = requests|selectattr("driver_id", "equalto", driver["id"])|list|length %}
+              <tr>
+                <td>{{ driver["name"] }}</td>
+                <td>{{ driver["phone"] }}</td>
+                <td>
+                  <span class="status-badge status-{{ driver["availability"] }}">
+                    {{ driver["availability"] }}
+                  </span>
+                </td>
+                <td>{{ job_count }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card notification-panel">
+      <h3>Activity Log</h3>
+      <div class="notification-list">
+        {% if notifications %}
+          {% for note in notifications %}
+            <div class="notification-card">
+              <p>{{ note["message"] }}</p>
+              <span>{{ note["created_at"] }}</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="muted-text">No activity yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <script>
+    // Tab switching system
+    function openAdminTab(tabId) {
+      document.querySelectorAll(".admin-tab-panel").forEach(panel => {
+        panel.classList.remove("active");
+      });
+      document.querySelectorAll(".admin-tab-btn").forEach(btn => {
+        btn.classList.remove("active");
+      });
+      
+      const targetPanel = document.getElementById(tabId);
+      if (targetPanel) targetPanel.classList.add("active");
+      
+      const targetBtn = document.getElementById("btn-" + tabId);
+      if (targetBtn) targetBtn.classList.add("active");
+      
+      localStorage.setItem("activeAdminTab", tabId);
+    }
+    
+    // Auto restore active tab on load
+    document.addEventListener("DOMContentLoaded", () => {
+      const activeTab = localStorage.getItem("activeAdminTab") || "requests-tab";
+      openAdminTab(activeTab);
+    });
+
+    // GPS Simulation Step
+    async function simulateGPSStep(btn, reqId) {
+      btn.disabled = true;
+      btn.innerHTML = "🌀 Simulating...";
+      try {
+        const response = await fetch("/simulate/gps/" + reqId, {
+          method: "POST"
+        });
+        const data = await response.json();
+        if (data.success) {
+          // Find the row and update the status badge
+          const row = btn.closest("tr");
+          const badge = row.querySelector(".status-badge");
+          badge.className = "status-badge status-" + data.status.toLowerCase().replace(" ", "-");
+          badge.textContent = data.status;
+          
+          btn.innerHTML = "📍 Progress: " + data.progress + "%";
+          if (data.status === "Delivered") {
+            btn.disabled = true;
+            btn.innerHTML = "✓ Delivered";
+            setTimeout(() => {
+              location.reload();
+            }, 1000);
+          } else {
+            setTimeout(() => {
+              btn.disabled = false;
+              btn.innerHTML = "📍 Move GPS";
+            }, 1000);
+          }
+        }
+      } catch (e) {
+        btn.disabled = false;
+        btn.innerHTML = "📍 Sim Error";
+      }
+    }
+
+    // Search and filter functionality for Tab 1
+    const searchInput = document.getElementById("searchInput");
+    const statusFilters = document.querySelectorAll(".status-filter");
+    const requestRows = document.querySelectorAll(".request-row");
+
+    function filterTable() {
+      const searchTerm = searchInput.value.toLowerCase();
+      const selectedStatuses = Array.from(statusFilters)
+        .filter(f => f.checked)
+        .map(f => f.value);
+
+      requestRows.forEach(row => {
+        const matches =
+          (row.textContent.toLowerCase().includes(searchTerm)) &&
+          (selectedStatuses.includes(row.dataset.status));
+        row.style.display = matches ? "" : "none";
+      });
+    }
+
+    if (searchInput) {
+      searchInput.addEventListener("input", filterTable);
+      statusFilters.forEach(f => f.addEventListener("change", filterTable));
+    }
+
+    // Dark mode toggle
+    const darkModeToggle = document.getElementById("darkModeToggle");
+    if (darkModeToggle) {
+      darkModeToggle.addEventListener("click", () => {
+        document.body.classList.toggle("dark-mode");
+        const isDark = document.body.classList.contains("dark-mode");
+        localStorage.setItem("darkMode", isDark);
+        darkModeToggle.textContent = isDark ? "☀️ Light Mode" : "🌙 Dark Mode";
+      });
+
+      if (localStorage.getItem("darkMode") === "true") {
+        darkModeToggle.textContent = "☀️ Light Mode";
+      } else {
+        darkModeToggle.textContent = "🌙 Dark Mode";
+      }
+    }
+  </script>
+{% endblock %}

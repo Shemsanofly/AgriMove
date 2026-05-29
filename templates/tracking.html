@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Live Tracking - Request #{{ request.id }} | AgriMove AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+    <div class="tracking-container">
+        <header class="tracking-header">
+            <div class="container">
+                <a href="/" class="back-link">← Dashboard</a>
+                <h1>📍 Real-Time Delivery Tracking</h1>
+            </div>
+        </header>
+
+        <main class="container tracking-main">
+            <section class="tracking-grid">
+                <div class="card tracking-info">
+                    <h3>Delivery Details</h3>
+                    <div class="detail-row">
+                        <span>Request ID:</span>
+                        <strong>#{{ request.id }}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Pickup:</span>
+                        <strong>{{ request.pickup_location }}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Destination:</span>
+                        <strong>{{ request.destination }}</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Goods:</span>
+                        <strong>{{ request.goods_type }} ({{ request.quantity }})</strong>
+                    </div>
+                    <div class="detail-row">
+                        <span>Status:</span>
+                        <span class="status-badge status-{{ request.status|lower|replace(' ', '-') }}">
+                            {{ request.status }}
+                        </span>
+                    </div>
+                    <div class="detail-row">
+                        <span>ETA:</span>
+                        <strong>{{ request.eta_minutes }} minutes</strong>
+                    </div>
+                </div>
+
+                <div class="card tracking-map">
+                    <h3>Live Transit Map Mockup</h3>
+                    <p class="section-sub" style="font-size:0.85rem; color:var(--muted); margin-bottom:12px;">Real-time GPS coordinate interpolation over Tanzanian roads.</p>
+                    <div class="live-progress-track-container" style="position: relative; padding: 40px 10px; background: var(--bg-light); border-radius: 12px; border: 1px solid rgba(15,31,22,0.08); overflow: hidden; margin-top: 16px;">
+                        <div class="progress-route-bg-line" style="height: 6px; background: #e0e0e0; border-radius: 3px; width: 100%;"></div>
+                        <div class="progress-route-fill-line" id="routeFillLine" style="height: 6px; background: var(--green); border-radius: 3px; width: 0%; position: absolute; top: 40px; left: 10px; transition: width 0.8s ease;"></div>
+                        <div class="progress-truck-marker" id="truckMarker" style="position: absolute; top: 28px; left: 10px; font-size: 1.6rem; transition: left 0.8s ease; transform: translateX(-50%);">🚚</div>
+                        <div style="display:flex; justify-content:space-between; margin-top: 20px; font-size: 0.8rem; font-weight:600; color: var(--muted); flex-wrap:wrap; gap:8px;">
+                            <div>🚜 {{ request.pickup_location }}</div>
+                            <div id="liveCoordsLabel" style="color:var(--green); font-family:monospace;">GPS: Loading...</div>
+                            <div>📍 {{ request.destination }}</div>
+                        </div>
+                    </div>
+                    <div class="progress-bar-container" style="margin-top:20px;">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 6px; font-size:0.9rem; font-weight:600;">
+                            <span>Shipment Journey Progress</span>
+                            <span id="progressTextLabel">0%</span>
+                        </div>
+                        <div class="progress-bar" style="height:12px; background:#e0e0e0; border-radius:99px; overflow:hidden;">
+                            <div class="progress-fill" id="journeyProgressBar" style="width:0%; height:100%; background:linear-gradient(90deg, var(--green), var(--gold)); transition: width 0.8s ease;"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card tracking-progress">
+                <h3>Journey Timeline</h3>
+                <div class="progress-timeline">
+                    {% set statuses = ['Pending', 'Accepted', 'In Transit', 'Delivered'] %}
+                    {% for status in statuses %}
+                        {% set is_active = request.status == status %}
+                        {% set is_completed = statuses.index(status) < statuses.index(request.status) %}
+                        <div class="timeline-item {% if is_active %}active{% endif %} {% if is_completed %}completed{% endif %}">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-content">
+                                <h4>{{ status }}</h4>
+                                <p class="muted-text">
+                                    {% if is_completed or is_active %}
+                                        ✓ In progress
+                                    {% else %}
+                                        Pending
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <section class="card tracking-updates">
+                <h3>Live Updates</h3>
+                <div class="updates-feed">
+                    {% if tracking %}
+                        {% for track in tracking %}
+                            <div class="update-item">
+                                <div class="update-time">{{ track.timestamp }}</div>
+                                <div class="update-message">
+                                    {% if track.status == 'pickup' %}
+                                        🚚 <strong>Picked up goods</strong> at {{ track.latitude }}, {{ track.longitude }}
+                                    {% elif track.status == 'in_transit' %}
+                                        🛣️ <strong>En route</strong> - Current location: {{ track.latitude }}, {{ track.longitude }}
+                                    {% elif track.status == 'delivered' %}
+                                        ✅ <strong>Delivered</strong> at {{ track.latitude }}, {{ track.longitude }}
+                                    {% else %}
+                                        📍 {{ track.status }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="muted-text">Tracking updates will appear here...</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            <section class="card" style="margin-top: 20px;">
+                <h3>Rate This Delivery</h3>
+                <form method="post" action="{{ url_for('rate_delivery', request_id=request.id) }}" class="rating-form">
+                    <div class="form-group">
+                        <label>Your Rating (1-5 stars)</label>
+                        <div class="star-rating">
+                            {% for i in range(1, 6) %}
+                                <input type="radio" name="rating" value="{{ i }}" id="star{{ i }}" />
+                                <label for="star{{ i }}" class="star-label">★</label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Review (optional)</label>
+                        <textarea name="review" rows="3" placeholder="Share your experience..."></textarea>
+                    </div>
+                    <button class="btn btn-primary" type="submit">Submit Rating</button>
+                </form>
+            </section>
+        </main>
+    </div>
+
+    <style>
+        .tracking-container {
+            background: var(--bg-light);
+            min-height: 100vh;
+        }
+
+        .tracking-header {
+            background: linear-gradient(135deg, var(--green), var(--gold));
+            color: var(--white);
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+
+        .tracking-header h1 {
+            font-size: 2rem;
+            margin-top: 12px;
+        }
+
+        .back-link {
+            color: var(--white);
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .tracking-main {
+            display: grid;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .tracking-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .tracking-info {
+            padding: 24px;
+        }
+
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(15, 31, 22, 0.08);
+        }
+
+        .detail-row span {
+            color: var(--muted);
+        }
+
+        .detail-row strong {
+            color: var(--dark);
+        }
+
+        .tracking-map {
+            padding: 24px;
+        }
+
+        .map-placeholder {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.08), rgba(242, 193, 78, 0.08));
+            border-radius: 14px;
+            padding: 32px;
+            text-align: center;
+            min-height: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .route-visualization {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .location-point {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 20px;
+            width: 100%;
+            max-width: 300px;
+            box-shadow: var(--shadow);
+        }
+
+        .location-point .label {
+            font-weight: 700;
+            color: var(--green);
+            font-size: 0.9rem;
+        }
+
+        .location-point p {
+            margin-top: 8px;
+            color: var(--dark);
+        }
+
+        .route-line {
+            height: 40px;
+            width: 3px;
+            background: linear-gradient(180deg, var(--green), var(--gold));
+            border-radius: 999px;
+        }
+
+        .map-info {
+            margin-top: 20px;
+            color: var(--muted);
+        }
+
+        .tracking-progress {
+            padding: 24px;
+        }
+
+        .progress-timeline {
+            display: grid;
+            gap: 16px;
+            margin-top: 20px;
+        }
+
+        .timeline-item {
+            display: flex;
+            gap: 16px;
+            opacity: 0.5;
+            transition: opacity 0.3s ease;
+        }
+
+        .timeline-item.completed {
+            opacity: 1;
+        }
+
+        .timeline-item.active {
+            opacity: 1;
+        }
+
+        .timeline-dot {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: rgba(47, 125, 50, 0.3);
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+
+        .timeline-item.completed .timeline-dot {
+            background: var(--green);
+        }
+
+        .timeline-item.active .timeline-dot {
+            background: var(--gold);
+            box-shadow: 0 0 12px rgba(242, 193, 78, 0.6);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .timeline-content h4 {
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .tracking-updates {
+            padding: 24px;
+        }
+
+        .updates-feed {
+            display: grid;
+            gap: 12px;
+            margin-top: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .update-item {
+            background: rgba(47, 125, 50, 0.05);
+            border-left: 3px solid var(--green);
+            padding: 12px;
+            border-radius: 6px;
+        }
+
+        .update-time {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .update-message {
+            color: var(--dark);
+        }
+
+        .rating-form {
+            margin-top: 16px;
+        }
+
+        .star-rating {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            font-size: 2.4rem;
+        }
+
+        .star-rating input {
+            display: none;
+        }
+
+        .star-label {
+            cursor: pointer;
+            color: rgba(47, 125, 50, 0.3);
+            transition: color 0.2s ease;
+        }
+
+        .star-rating input:checked ~ .star-label,
+        .star-label:hover {
+            color: var(--gold);
+        }
+    </style>
+
+    <script>
+        const requestId = {{ request.id }};
+        let currentStatus = "{{ request.status }}";
+        
+        async function updateGpsPosition() {
+            if (currentStatus === "Delivered") {
+                document.getElementById("liveCoordsLabel").textContent = "Arrived at destination";
+                document.getElementById("journeyProgressBar").style.width = "100%";
+                document.getElementById("routeFillLine").style.width = "100%";
+                document.getElementById("truckMarker").style.left = "calc(100% - 15px)";
+                document.getElementById("progressTextLabel").textContent = "100%";
+                return;
+            }
+            
+            try {
+                const response = await fetch("/simulate/gps/" + requestId, {
+                    method: "POST"
+                });
+                const data = await response.json();
+                if (data.success) {
+                    currentStatus = data.status;
+                    
+                    const progressBar = document.getElementById("journeyProgressBar");
+                    const routeFill = document.getElementById("routeFillLine");
+                    const truck = document.getElementById("truckMarker");
+                    const textLabel = document.getElementById("progressTextLabel");
+                    const coordsLabel = document.getElementById("liveCoordsLabel");
+                    
+                    const progressPercent = data.progress;
+                    progressBar.style.width = progressPercent + "%";
+                    routeFill.style.width = progressPercent + "%";
+                    
+                    // Constrain truck position to fit nicely within container
+                    truck.style.left = `calc(${progressPercent}% * 0.95 + 10px)`;
+                    textLabel.textContent = progressPercent + "%";
+                    coordsLabel.textContent = `Lat: ${data.latitude}, Lon: ${data.longitude}`;
+                    
+                    // Update status badge on screen
+                    const badge = document.querySelector(".tracking-info .status-badge");
+                    if (badge) {
+                        badge.className = "status-badge status-" + data.status.toLowerCase().replace(" ", "-");
+                        badge.textContent = data.status;
+                    }
+                    
+                    // Check timeline dots and update active/completed states
+                    updateTimelineUI(data.status);
+                    
+                    // Add record to live updates feed
+                    appendUpdateFeed(data.latitude, data.longitude, data.status);
+                    
+                    if (data.status === "Delivered") {
+                        clearInterval(pollInterval);
+                        alert("📦 Delivery arrived! Your crop shipment has successfully reached its destination.");
+                        location.reload();
+                    }
+                }
+            } catch (e) {
+                console.error("GPS Sim Polling error: ", e);
+            }
+        }
+        
+        function updateTimelineUI(status) {
+            const statuses = ['Pending', 'Accepted', 'In Transit', 'Delivered'];
+            const currentIdx = statuses.indexOf(status);
+            
+            document.querySelectorAll(".timeline-item").forEach((item, idx) => {
+                item.className = "timeline-item";
+                if (idx < currentIdx) {
+                    item.classList.add("completed");
+                    const note = item.querySelector(".muted-text");
+                    if (note) note.textContent = "✓ Completed";
+                } else if (idx === currentIdx) {
+                    item.classList.add("active");
+                    const note = item.querySelector(".muted-text");
+                    if (note) note.textContent = "✓ In progress";
+                } else {
+                    const note = item.querySelector(".muted-text");
+                    if (note) note.textContent = "Pending";
+                }
+            });
+        }
+        
+        function appendUpdateFeed(lat, lon, status) {
+            const feed = document.querySelector(".updates-feed");
+            const empty = feed.querySelector(".muted-text");
+            if (empty) empty.remove();
+            
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            let msg = "";
+            if (status === "Delivered") {
+                msg = `✅ <strong>Delivered</strong> at destination market. Lat: ${lat}, Lon: ${lon}`;
+            } else if (status === "In Transit") {
+                msg = `🛣️ <strong>En route</strong> - Current location: Lat: ${lat}, Lon: ${lon}`;
+            } else {
+                msg = `🚚 <strong>Pickup coordinates verified</strong> at Farm. Lat: ${lat}, Lon: ${lon}`;
+            }
+            
+            const item = document.createElement("div");
+            item.className = "update-item animate-in";
+            item.innerHTML = `
+                <div class="update-time">${timeStr}</div>
+                <div class="update-message">${msg}</div>
+            `;
+            
+            feed.insertBefore(item, feed.firstChild);
+        }
+        
+        let pollInterval = null;
+        if (currentStatus !== "Delivered" && currentStatus !== "Pending" && currentStatus !== "Accepted") {
+            // Start polling if In Transit
+            updateGpsPosition();
+            pollInterval = setInterval(updateGpsPosition, 6000);
+        } else {
+            // Set initial UI values
+            document.getElementById("liveCoordsLabel").textContent = currentStatus === "Delivered" ? "Arrived" : "Awaiting dispatch";
+            const initPercent = currentStatus === "Delivered" ? 100 : (currentStatus === "Accepted" ? 16 : 0);
+            document.getElementById("journeyProgressBar").style.width = initPercent + "%";
+            document.getElementById("routeFillLine").style.width = initPercent + "%";
+            document.getElementById("truckMarker").style.left = `calc(${initPercent}% * 0.95 + 10px)`;
+            document.getElementById("progressTextLabel").textContent = initPercent + "%";
+            
+            if (currentStatus === "Accepted") {
+                // If accepted, poll to see if it moves to transit
+                pollInterval = setInterval(async () => {
+                    const res = await fetch("/api/requests");
+                    const reqs = await res.json();
+                    const reqObj = reqs.find(r => r.id === requestId);
+                    if (reqObj && reqObj.status !== currentStatus) {
+                        currentStatus = reqObj.status;
+                        location.reload();
+                    }
+                }, 5000);
+            }
+        }
+    </script>
+</body>
+</html>

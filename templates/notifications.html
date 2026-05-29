@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Notifications | AgriMove AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+    <div class="notifications-container">
+        <header class="notifications-header">
+            <div class="container">
+                <a href="/" class="back-link">← Back</a>
+                <h1>🔔 Notifications</h1>
+            </div>
+        </header>
+
+        <main class="container notifications-main">
+            <div class="notifications-toolbar">
+                <div class="toolbar-left">
+                    <h3>All Notifications</h3>
+                </div>
+                <div class="toolbar-right">
+                    <button class="btn btn-secondary" onclick="clearAllNotifications()">Clear All</button>
+                </div>
+            </div>
+
+            <div class="notifications-list">
+                {% if notifications %}
+                    {% for notif in notifications %}
+                    <div class="notification-item {% if notif['type'] == 'success' %}success{% elif notif['type'] == 'error' %}error{% elif notif['type'] == 'warning' %}warning{% endif %}">
+                        <div class="notification-icon">
+                            {% if notif['type'] == 'success' %}
+                                ✅
+                            {% elif notif['type'] == 'error' %}
+                                ❌
+                            {% elif notif['type'] == 'warning' %}
+                                ⚠️
+                            {% else %}
+                                ℹ️
+                            {% endif %}
+                        </div>
+                        <div class="notification-content">
+                            <p class="notification-message">{{ notif['message'] }}</p>
+                            <p class="notification-time">{{ notif['created_at'] }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state">
+                        <p class="empty-icon">📭</p>
+                        <h3>No notifications yet</h3>
+                        <p>You'll see delivery updates, alerts, and messages here</p>
+                    </div>
+                {% endif %}
+            </div>
+        </main>
+    </div>
+
+    <style>
+        .notifications-container {
+            background: var(--bg-light);
+            min-height: 100vh;
+        }
+
+        .notifications-header {
+            background: linear-gradient(135deg, var(--green), var(--gold));
+            color: var(--white);
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+
+        .notifications-header h1 {
+            font-size: 2rem;
+            margin: 0;
+        }
+
+        .back-link {
+            color: var(--white);
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .notifications-main {
+            max-width: 700px;
+            margin: 0 auto 40px;
+        }
+
+        .notifications-toolbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 12px;
+        }
+
+        .notifications-toolbar h3 {
+            color: var(--dark);
+            margin: 0;
+        }
+
+        .notifications-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .notification-item {
+            display: flex;
+            gap: 16px;
+            background: var(--white);
+            border-left: 4px solid var(--green);
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: var(--shadow);
+            transition: transform 0.2s ease;
+        }
+
+        .notification-item:hover {
+            transform: translateX(4px);
+        }
+
+        .notification-item.success {
+            border-left-color: #4CAF50;
+        }
+
+        .notification-item.error {
+            border-left-color: #f44336;
+        }
+
+        .notification-item.warning {
+            border-left-color: #ff9800;
+        }
+
+        .notification-icon {
+            font-size: 1.6rem;
+            flex-shrink: 0;
+        }
+
+        .notification-content {
+            flex: 1;
+        }
+
+        .notification-message {
+            color: var(--dark);
+            margin: 0 0 6px 0;
+            font-weight: 500;
+        }
+
+        .notification-time {
+            color: var(--muted);
+            font-size: 0.85rem;
+            margin: 0;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 16px;
+        }
+
+        .empty-state h3 {
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .empty-state p {
+            color: var(--muted);
+        }
+
+        @media (max-width: 768px) {
+            .notifications-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .notification-item {
+                gap: 12px;
+                padding: 12px;
+            }
+        }
+    </style>
+
+    <script>
+        function clearAllNotifications() {
+            if (confirm('Are you sure you want to clear all notifications?')) {
+                fetch('/notifications/clear', { method: 'POST' })
+                    .then(() => location.reload())
+                    .catch(err => console.error('Error:', err));
+            }
+        }
+    </script>
+</body>
+</html>

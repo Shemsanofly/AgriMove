@@ -1,0 +1,183 @@
+{% extends "dashboard_base.html" %}
+
+{% block content %}
+  <section class="dashboard-grid">
+    <div class="card stat-card">
+      <h3>Total Requests</h3>
+      <p class="stat-value">{{ counts["Pending"] + counts["Accepted"] + counts["In Transit"] + counts["Delivered"] }}</p>
+      <span>All transport submissions</span>
+    </div>
+    <div class="card stat-card">
+      <h3>Pending</h3>
+      <p class="stat-value">{{ counts["Pending"] }}</p>
+      <span>Awaiting driver action</span>
+    </div>
+    <div class="card stat-card">
+      <h3>Accepted</h3>
+      <p class="stat-value">{{ counts["Accepted"] }}</p>
+      <span>Driver assigned</span>
+    </div>
+    <div class="card stat-card">
+      <h3>In Transit</h3>
+      <p class="stat-value">{{ counts["In Transit"] }}</p>
+      <span>Currently en route</span>
+    </div>
+    <div class="card stat-card">
+      <h3>Delivered</h3>
+      <p class="stat-value">{{ counts["Delivered"] }}</p>
+      <span>Completed deliveries</span>
+    </div>
+    <div class="card ai-card">
+      <h3>AI Route Optimization Active</h3>
+      <p>
+        {% if latest and latest["eta_minutes"] %}
+          Estimated delivery time: {{ latest["eta_minutes"] }} mins
+        {% else %}
+          Real-time route planning is enabled for every request.
+        {% endif %}
+      </p>
+    </div>
+  </section>
+
+  <!-- Market Intelligence & Buyer Marketplace Section -->
+  <section class="dashboard-section">
+    <h2>💰 Market Intelligence & Buyer Offers</h2>
+    <div class="market-quick-links">
+      <a href="{{ url_for('market_prices') }}" class="market-link">
+        <span class="icon">📊</span>
+        <span class="text">View Market Prices</span>
+        <span class="arrow">→</span>
+      </a>
+      <a href="{{ url_for('profit_estimator_page') }}" class="market-link">
+        <span class="icon">💡</span>
+        <span class="text">Calculate Profit</span>
+        <span class="arrow">→</span>
+      </a>
+      <a href="{{ url_for('farmer_offers', farmer_id=farmer.id if farmer else 1) }}" class="market-link" style="border-left: 4px solid #2ecc71; background: #f0fdf4;">
+        <span class="icon">💼</span>
+        <span class="text">View Buyer Offers</span>
+        <span class="arrow">→</span>
+      </a>
+      <a href="{{ url_for('buyer_marketplace') }}" class="market-link">
+        <span class="icon">🛒</span>
+        <span class="text">Marketplace Hub</span>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="dashboard-two">
+    <div class="card form-card">
+      <h3>Submit Transport Request</h3>
+      <form method="post" class="dashboard-form">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="name">Farmer Name</label>
+            <input id="name" name="name" type="text" placeholder="Ama Mensah" required />
+          </div>
+          <div class="form-group">
+            <label for="phone">Phone Number</label>
+            <input id="phone" name="phone" type="tel" placeholder="+233..." required />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="pickup_location">Pickup Location</label>
+            <select id="pickup_location" name="pickup_location" required>
+              <option value="">Select pickup point</option>
+              {% for location in pickup_locations %}
+                <option value="{{ location }}">{{ location }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="destination">Destination</label>
+            <select id="destination" name="destination" required>
+              <option value="">Select market destination</option>
+              {% for region in destination_regions %}
+                <option value="{{ region }}">{{ region }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="goods_type">Goods Type</label>
+            <select id="goods_type" name="goods_type" required>
+              <option value="">Select crop</option>
+              {% for crop in crops %}
+                <option value="{{ crop }}">{{ crop }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="quantity">Quantity</label>
+            <input id="quantity" name="quantity" type="text" placeholder="20 crates" required />
+          </div>
+        </div>
+        <button class="btn btn-primary" type="submit">Request Transport</button>
+      </form>
+    </div>
+
+    <div class="card notification-panel">
+      <h3>Notifications</h3>
+      <div class="notification-list">
+        {% if notifications %}
+          {% for note in notifications %}
+            <div class="notification-card">
+              <p>{{ note["message"] }}</p>
+              <span>{{ note["created_at"] }}</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="muted-text">No notifications yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="card table-card">
+    <div class="table-header">
+      <h3>Request Status</h3>
+      <span>Status overview for all submissions</span>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Request ID</th>
+            <th>Pickup</th>
+            <th>Destination</th>
+            <th>Goods</th>
+            <th>Quantity</th>
+            <th>Driver</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if requests %}
+            {% for req in requests %}
+              <tr>
+                <td>#{{ req["id"] }}</td>
+                <td>{{ req["pickup_location"] }}</td>
+                <td>{{ req["destination"] }}</td>
+                <td>{{ req["goods_type"] }}</td>
+                <td>{{ req["quantity"] }}</td>
+                <td>{{ req["driver_name"] if req["driver_name"] else "Searching..." }}</td>
+                <td>
+                  <span class="status-badge status-{{ req["status"]|lower|replace(' ', '-') }}">
+                    {{ req["status"] }}
+                  </span>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7" class="empty-state">No requests submitted yet.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

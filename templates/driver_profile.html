@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Driver Profile - {{ driver.name }} | AgriMove AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+    <div class="profile-container">
+        <header class="profile-header">
+            <div class="container">
+                <a href="/" class="back-link">← Back</a>
+                <div class="profile-hero">
+                    <div class="profile-avatar">
+                        <span class="avatar-icon">🚗</span>
+                    </div>
+                    <div class="profile-info">
+                        <h1>{{ driver.name }}</h1>
+                        <p class="phone">{{ driver.phone }}</p>
+                        <div class="rating-stars">
+                            {% for i in range(5) %}
+                                <span class="star {% if i < driver.rating %}filled{% endif %}">★</span>
+                            {% endfor %}
+                            <span class="rating-text">{{ driver.rating }} / 5.0</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <main class="container profile-main">
+            <section class="profile-grid">
+                <div class="card stat-card">
+                    <h3>Total Deliveries</h3>
+                    <p class="stat-value">{{ driver.total_deliveries }}</p>
+                    <span>All-time completions</span>
+                </div>
+                <div class="card stat-card">
+                    <h3>Today's Deliveries</h3>
+                    <p class="stat-value">{{ driver.completed_today }}</p>
+                    <span>Completed today</span>
+                </div>
+                <div class="card stat-card">
+                    <h3>Total Earnings</h3>
+                    <p class="stat-value">₵{{ "%.2f"|format(driver.earnings) }}</p>
+                    <span>Lifetime income</span>
+                </div>
+                <div class="card stat-card">
+                    <h3>Vehicle Type</h3>
+                    <p class="stat-value">{{ driver.vehicle_type|upper }}</p>
+                    <span>Transport capacity</span>
+                </div>
+            </section>
+
+            <section class="profile-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-top: 24px;">
+                {% for badge in badges %}
+                    <div class="badge-card">
+                        <div class="badge-icon">{{ badge.icon }}</div>
+                        <h4>{{ badge.name }}</h4>
+                        <p>{{ badge.desc }}</p>
+                    </div>
+                {% endfor %}
+            </section>
+
+            <section class="card" style="margin-top: 24px;">
+                <div class="table-header">
+                    <h3>Recent Deliveries</h3>
+                </div>
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Request</th>
+                                <th>Location</th>
+                                <th>Status</th>
+                                <th>Rating</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for req in requests %}
+                                <tr>
+                                    <td>#{{ req.id }}</td>
+                                    <td>{{ req.pickup_location }} → {{ req.destination }}</td>
+                                    <td>
+                                        <span class="status-badge status-{{ req.status|lower|replace(' ', '-') }}">
+                                            {{ req.status }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if req.rating %}
+                                            <span class="rating-inline">
+                                                {% for i in range(5) %}
+                                                    <span class="star {% if i < req.rating %}filled{% endif %}">★</span>
+                                                {% endfor %}
+                                            </span>
+                                        {% else %}
+                                            <span class="muted-text">—</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <style>
+        .profile-container {
+            background: var(--bg-light);
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, var(--green), var(--gold));
+            color: var(--white);
+            padding: 40px 0;
+            margin-bottom: 30px;
+        }
+
+        .back-link {
+            display: inline-block;
+            color: var(--white);
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .profile-hero {
+            display: flex;
+            gap: 24px;
+            align-items: center;
+        }
+
+        .profile-avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+
+        .profile-info h1 {
+            font-size: 2.2rem;
+            margin-bottom: 8px;
+        }
+
+        .rating-stars {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .star {
+            font-size: 1.2rem;
+            color: rgba(255, 255, 255, 0.5);
+        }
+
+        .star.filled {
+            color: var(--white);
+        }
+
+        .rating-text {
+            font-weight: 600;
+            margin-left: 12px;
+        }
+
+        .badge-card {
+            background: var(--card-bg);
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+            box-shadow: var(--shadow);
+        }
+
+        .badge-icon {
+            font-size: 2.4rem;
+            margin-bottom: 8px;
+        }
+
+        .badge-card h4 {
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .badge-card p {
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        .rating-inline {
+            display: flex;
+            gap: 2px;
+        }
+
+        .profile-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 18px;
+        }
+    </style>
+</body>
+</html>

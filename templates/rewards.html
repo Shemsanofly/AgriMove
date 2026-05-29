@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Rewards & Loyalty | AgriMove AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+    <div class="rewards-container">
+        <header class="rewards-header">
+            <div class="container">
+                <a href="/" class="back-link">← Home</a>py
+                <h1>🎁 Rewards & Loyalty Program</h1>
+                <p>Earn points on every delivery and unlock exclusive benefits</p>
+            </div>
+        </header>
+
+        <main class="container rewards-main">
+            <section class="card how-it-works">
+                <h2>How It Works</h2>
+                <div class="steps-grid">
+                    <div class="step-card">
+                        <div class="step-number">1</div>
+                        <h3>Complete Deliveries</h3>
+                        <p>Earn 1 point for every delivery completed through AgriMove AI</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">2</div>
+                        <h3>Accumulate Points</h3>
+                        <p>Build your points balance with each successful transaction</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">3</div>
+                        <h3>Redeem Rewards</h3>
+                        <p>Trade points for discounts, bonuses, and exclusive benefits</p>
+                    </div>
+                    <div class="step-card">
+                        <div class="step-number">4</div>
+                        <h3>Unlock Tiers</h3>
+                        <p>Rise through Bronze, Silver, Gold, and Platinum membership levels</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card rewards-tiers">
+                <h2>Membership Tiers</h2>
+                <div class="tiers-grid">
+                    <div class="tier bronze">
+                        <div class="tier-icon">🥉</div>
+                        <h3>Bronze</h3>
+                        <p class="tier-req">0-99 Points</p>
+                        <ul class="tier-benefits">
+                            <li>✓ 5% Discount</li>
+                            <li>✓ SMS Alerts</li>
+                            <li>✓ Basic Support</li>
+                        </ul>
+                    </div>
+
+                    <div class="tier silver">
+                        <div class="tier-icon">⚪</div>
+                        <h3>Silver</h3>
+                        <p class="tier-req">100-249 Points</p>
+                        <ul class="tier-benefits">
+                            <li>✓ 10% Discount</li>
+                            <li>✓ SMS + Email Alerts</li>
+                            <li>✓ Priority Support</li>
+                            <li>✓ Monthly Bonus Points</li>
+                        </ul>
+                    </div>
+
+                    <div class="tier gold">
+                        <div class="tier-icon">🟡</div>
+                        <h3>Gold</h3>
+                        <p class="tier-req">250-499 Points</p>
+                        <ul class="tier-benefits">
+                            <li>✓ 15% Discount</li>
+                            <li>✓ 24/7 Premium Support</li>
+                            <li>✓ Free Express Delivery</li>
+                            <li>✓ Exclusive Offers</li>
+                            <li>✓ Bonus 50 Points/Month</li>
+                        </ul>
+                    </div>
+
+                    <div class="tier platinum">
+                        <div class="tier-icon">💎</div>
+                        <h3>Platinum</h3>
+                        <p class="tier-req">500+ Points</p>
+                        <ul class="tier-benefits">
+                            <li>✓ 20% Discount</li>
+                            <li>✓ Dedicated Account Manager</li>
+                            <li>✓ Free Premium Deliveries</li>
+                            <li>✓ VIP Events Access</li>
+                            <li>✓ Bonus 100 Points/Month</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card redemption-options">
+                <h2>Redeem Your Points</h2>
+                <div class="redemption-grid">
+                    <div class="redemption-card">
+                        <div class="redemption-icon">💰</div>
+                        <h3>Delivery Discount</h3>
+                        <p class="redemption-value">100 Points = ₵10 OFF</p>
+                        <button class="btn btn-secondary">Redeem Now</button>
+                    </div>
+
+                    <div class="redemption-card">
+                        <div class="redemption-icon">📦</div>
+                        <h3>Free Express Delivery</h3>
+                        <p class="redemption-value">150 Points</p>
+                        <button class="btn btn-secondary">Redeem Now</button>
+                    </div>
+
+                    <div class="redemption-card">
+                        <div class="redemption-icon">⭐</div>
+                        <h3>Priority Support</h3>
+                        <p class="redemption-value">200 Points (30 days)</p>
+                        <button class="btn btn-secondary">Redeem Now</button>
+                    </div>
+
+                    <div class="redemption-card">
+                        <div class="redemption-icon">🎉</div>
+                        <h3>Bonus Cash Back</h3>
+                        <p class="redemption-value">250 Points = ₵30</p>
+                        <button class="btn btn-secondary">Redeem Now</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card leaderboard-preview">
+                <h2>🏆 Top Reward Earners</h2>
+                <div class="earners-grid">
+                    <h3>Farmers</h3>
+                    <div class="earners-list">
+                        {% for farmer in farmers %}
+                        <div class="earner-item">
+                            <div class="earner-rank">{{ loop.index }}</div>
+                            <div class="earner-info">
+                                <h4>{{ farmer['name'] }}</h4>
+                                <p class="muted-text">{{ farmer['phone'] }}</p>
+                            </div>
+                            <div class="earner-points">
+                                <strong>{{ farmer['points'] }}</strong>
+                                <span>pts</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <h3 style="grid-column: 2; margin-top: 20px;">Drivers</h3>
+                    <div class="earners-list">
+                        {% for driver in drivers %}
+                        <div class="earner-item">
+                            <div class="earner-rank">{{ loop.index }}</div>
+                            <div class="earner-info">
+                                <h4>{{ driver['name'] }}</h4>
+                                <p class="muted-text">{{ driver['phone'] }}</p>
+                            </div>
+                            <div class="earner-points">
+                                <strong>{{ driver['points'] }}</strong>
+                                <span>pts</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </section>
+
+            <section class="card faq-section">
+                <h2>Frequently Asked Questions</h2>
+                <div class="faq-items">
+                    <div class="faq-item">
+                        <h4>When do I earn points?</h4>
+                        <p>Points are awarded automatically when a delivery is marked as "Delivered" on AgriMove AI. Both farmers and drivers earn points.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4>Do points expire?</h4>
+                        <p>No! Your points never expire. Keep accumulating them indefinitely.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4>Can I transfer points?</h4>
+                        <p>Points are tied to individual accounts and cannot be transferred.</p>
+                    </div>
+                    <div class="faq-item">
+                        <h4>What if I redeem points and change my mind?</h4>
+                        <p>Contact our support team within 24 hours for assistance with reversals.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <style>
+        .rewards-container {
+            background: var(--bg-light);
+            min-height: 100vh;
+        }
+
+        .rewards-header {
+            background: linear-gradient(135deg, var(--gold), var(--green));
+            color: var(--white);
+            padding: 40px 0;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .rewards-header h1 {
+            font-size: 2.4rem;
+            margin: 12px 0;
+        }
+
+        .rewards-header p {
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .back-link {
+            color: var(--white);
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .rewards-main {
+            display: grid;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .how-it-works {
+            padding: 32px;
+        }
+
+        .how-it-works h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+            font-size: 1.8rem;
+        }
+
+        .steps-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .step-card {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.08), rgba(242, 193, 78, 0.05));
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .step-number {
+            font-size: 2.4rem;
+            font-weight: 700;
+            color: var(--green);
+            margin-bottom: 12px;
+        }
+
+        .step-card h3 {
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .step-card p {
+            color: var(--muted);
+            font-size: 0.9rem;
+        }
+
+        .rewards-tiers {
+            padding: 32px;
+        }
+
+        .rewards-tiers h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+            font-size: 1.8rem;
+        }
+
+        .tiers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .tier {
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .tier:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+        }
+
+        .tier-icon {
+            font-size: 2.4rem;
+            margin-bottom: 12px;
+        }
+
+        .tier h3 {
+            color: var(--dark);
+            margin-bottom: 4px;
+        }
+
+        .tier-req {
+            color: var(--muted);
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+        }
+
+        .tier-benefits {
+            list-style: none;
+            padding: 0;
+            text-align: left;
+        }
+
+        .tier-benefits li {
+            color: var(--dark);
+            padding: 6px 0;
+            font-size: 0.9rem;
+        }
+
+        .tier.platinum {
+            border-color: var(--gold);
+            background: rgba(242, 193, 78, 0.05);
+        }
+
+        .tier.gold {
+            border-color: var(--gold);
+        }
+
+        .redemption-options {
+            padding: 32px;
+        }
+
+        .redemption-options h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+            font-size: 1.8rem;
+        }
+
+        .redemption-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .redemption-card {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.08), rgba(242, 193, 78, 0.05));
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .redemption-icon {
+            font-size: 2.4rem;
+            margin-bottom: 12px;
+        }
+
+        .redemption-card h3 {
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .redemption-value {
+            color: var(--green);
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .leaderboard-preview {
+            padding: 32px;
+        }
+
+        .leaderboard-preview h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+            font-size: 1.8rem;
+        }
+
+        .earners-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+        }
+
+        .earners-grid h3 {
+            grid-column: 1 / -1;
+            color: var(--dark);
+            margin-top: 0;
+        }
+
+        .earners-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .earner-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--white);
+            border-radius: 10px;
+            padding: 12px;
+        }
+
+        .earner-rank {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--gold);
+            min-width: 30px;
+            text-align: center;
+        }
+
+        .earner-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .earner-info h4 {
+            color: var(--dark);
+            margin-bottom: 2px;
+        }
+
+        .earner-points {
+            text-align: center;
+            font-weight: 700;
+        }
+
+        .earner-points strong {
+            display: block;
+            color: var(--green);
+            font-size: 1.2rem;
+        }
+
+        .earner-points span {
+            color: var(--muted);
+            font-size: 0.8rem;
+        }
+
+        .faq-section {
+            padding: 32px;
+        }
+
+        .faq-section h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+            font-size: 1.8rem;
+        }
+
+        .faq-items {
+            display: grid;
+            gap: 16px;
+        }
+
+        .faq-item {
+            background: rgba(47, 125, 50, 0.05);
+            border-radius: 10px;
+            padding: 16px;
+        }
+
+        .faq-item h4 {
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .faq-item p {
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        @media (max-width: 768px) {
+            .rewards-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .how-it-works,
+            .rewards-tiers,
+            .redemption-options,
+            .leaderboard-preview,
+            .faq-section {
+                padding: 16px;
+            }
+
+            .steps-grid,
+            .tiers-grid,
+            .redemption-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .earners-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>

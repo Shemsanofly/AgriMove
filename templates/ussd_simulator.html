@@ -1,0 +1,389 @@
+{% extends "dashboard_base.html" %}
+
+{% block content %}
+<section class="simulator-layout">
+  <!-- Left Side: Simulator Info and Instructions -->
+  <div class="card info-card">
+    <h3>Simulating Africa's Talking USSD & SMS</h3>
+    <p>This sandbox simulates the exact request/response lifecycle of the Africa's Talking USSD API and SMS gateway in a real rural environment.</p>
+    
+    <div class="step-guide">
+      <h4>How to use:</h4>
+      <ul>
+        <li><strong>Step 1:</strong> Use the phone keypad on the right to dial <code>*123#</code>.</li>
+        <li><strong>Step 2:</strong> Press the green <strong>Call</strong> button to initiate the USSD session.</li>
+        <li><strong>Step 3:</strong> Navigate the menu by entering options in the prompt box and clicking <strong>Send</strong>.</li>
+        <li><strong>Step 4:</strong> Check the <strong>SMS Inbox</strong> tab on the phone to view notifications generated during actions.</li>
+      </ul>
+    </div>
+    
+    <div class="technical-notes">
+      <h5>API Format Compatibility</h5>
+      <p>The backend processes payloads matching the Africa's Talking POST payload structure:</p>
+      <pre><code>{
+  "sessionId": "AT_Session_...",
+  "serviceCode": "*123#",
+  "phoneNumber": "+254700000000",
+  "text": "1*2*1"
+}</code></pre>
+      <p>Responses return plain text starting with <code>CON</code> (continue menu) or <code>END</code> (terminate session).</p>
+      <p>For the Africa's Talking sandbox website, expose this app publicly and set the USSD callback URL to:</p>
+      <pre><code>{{ callback_url }}</code></pre>
+      <p>When running locally, tunnel Flask with a public HTTPS URL and use <code>https://your-tunnel/api/ussd</code>.</p>
+      <p><strong>SMS mode:</strong> {{ sms_status.message }}</p>
+    </div>
+  </div>
+
+  <!-- Right Side: Phone Mockup -->
+  <div class="phone-mockup">
+    <div class="phone-bezel">
+      <div class="phone-speaker"></div>
+      
+      <div class="phone-screen">
+        <!-- Status Bar -->
+        <div class="phone-status-bar">
+          <span class="time" id="phoneTime">12:00</span>
+          <span class="icons">📶 4G 🔋 98%</span>
+        </div>
+        
+        <!-- Screen Content Container -->
+        <div class="phone-display">
+          
+          <!-- Screen Tabs -->
+          <div class="phone-tabs">
+            <button class="tab-btn active" onclick="switchPhoneTab('dialer')">Dialer</button>
+            <button class="tab-btn" onclick="switchPhoneTab('sms')">SMS Inbox <span class="badge" id="smsBadge" style="display:none;">0</span></button>
+          </div>
+          
+          <!-- Dialer View -->
+          <div id="dialerView" class="phone-tab-content active">
+            <div class="dialer-screen">
+              <input type="text" id="dialInput" class="dial-input" placeholder="Dial *123#" readonly />
+            </div>
+            
+            <div class="phone-keypad">
+              <button onclick="pressKey('1')">1<small>o_o</small></button>
+              <button onclick="pressKey('2')">2<small>ABC</small></button>
+              <button onclick="pressKey('3')">3<small>DEF</small></button>
+              <button onclick="pressKey('4')">4<small>GHI</small></button>
+              <button onclick="pressKey('5')">5<small>JKL</small></button>
+              <button onclick="pressKey('6')">6<small>MNO</small></button>
+              <button onclick="pressKey('7')">7<small>PQRS</small></button>
+              <button onclick="pressKey('8')">8<small>TUV</small></button>
+              <button onclick="pressKey('9')">9<small>WXYZ</small></button>
+              <button onclick="pressKey('*')">*</button>
+              <button onclick="pressKey('0')">0<small>+</small></button>
+              <button onclick="pressKey('#')">#</button>
+              <button class="btn-clear" onclick="clearDialer()">Clear</button>
+              <button class="btn-dial" onclick="startUssd()">Call</button>
+              <button class="btn-backspace" onclick="backspaceDialer()">⌫</button>
+            </div>
+          </div>
+          
+          <!-- USSD Prompt Overlay -->
+          <div id="ussdOverlay" class="ussd-overlay">
+            <div class="ussd-window">
+              <div class="ussd-content" id="ussdContent">Loading session...</div>
+              <div class="ussd-loading" id="ussdLoading">
+                <div class="spinner"></div>
+              </div>
+              <div class="ussd-input-area" id="ussdInputArea">
+                <input type="text" id="ussdResponseInput" placeholder="Enter option..." onkeydown="if(event.key === 'Enter') submitUssdResponse()" />
+                <div class="ussd-actions">
+                  <button class="btn-ussd-cancel" onclick="closeUssd()">Cancel</button>
+                  <button class="btn-ussd-send" onclick="submitUssdResponse()">Send</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- SMS Inbox View -->
+          <div id="smsView" class="phone-tab-content">
+            <div class="sms-list" id="smsList">
+              <div class="sms-empty">No text messages yet.</div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      
+      <div class="phone-home-btn"></div>
+    </div>
+  </div>
+</section>
+
+<!-- Active requests for testing status tracking -->
+<section class="card table-card" style="margin-top: 30px;">
+  <div class="table-header">
+    <h3>Farmer Shipments Reference List</h3>
+    <span>Use these Request IDs in option 4 to track active orders.</span>
+  </div>
+  <div class="table-responsive">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Request ID</th>
+          <th>Farmer</th>
+          <th>Goods Type</th>
+          <th>Route</th>
+          <th>Current Status</th>
+          <th>Simulation</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for r in requests %}
+        <tr>
+          <td><strong>#{{ r.id }}</strong></td>
+          <td>{{ r.farmer_name }}</td>
+          <td>{{ r.goods_type }}</td>
+          <td>{{ r.pickup_location }} to {{ r.destination }}</td>
+          <td>
+            <span class="status-badge status-{{ r.status|lower|replace(' ', '-') }}">
+              {{ r.status }}
+            </span>
+          </td>
+          <td>
+            <button class="btn btn-micro btn-outline" type="button" onclick="simulateJourneyStep(this, {{ r.id }})">Move GPS</button>
+            <button class="btn btn-micro btn-primary" type="button" onclick="simulateFullJourney(this, {{ r.id }})">Full Journey</button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<script>
+  let currentUssdSessionId = "";
+  let ussdTextAccumulator = "";
+  let smsCount = 0;
+  
+  // Set real time in simulator clock
+  function updateClock() {
+    const now = new Date();
+    let hours = now.getHours();
+    let minutes = now.getMinutes();
+    hours = hours < 10 ? '0' + hours : hours;
+    minutes = minutes < 10 ? '0' + minutes : minutes;
+    document.getElementById("phoneTime").textContent = hours + ":" + minutes;
+  }
+  setInterval(updateClock, 1000);
+  updateClock();
+
+  function switchPhoneTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.phone-tab-content').forEach(view => view.classList.remove('active'));
+    
+    if (tab === 'dialer') {
+      document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+      document.getElementById('dialerView').classList.add('active');
+    } else {
+      document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+      document.getElementById('smsView').classList.add('active');
+      // Reset SMS badge
+      smsCount = 0;
+      const badge = document.getElementById("smsBadge");
+      badge.style.display = "none";
+      badge.textContent = "0";
+    }
+  }
+
+  function pressKey(key) {
+    const input = document.getElementById("dialInput");
+    if (input.value.length < 15) {
+      input.value += key;
+    }
+  }
+
+  function clearDialer() {
+    document.getElementById("dialInput").value = "";
+  }
+
+  function backspaceDialer() {
+    const input = document.getElementById("dialInput");
+    input.value = input.value.slice(0, -1);
+  }
+
+  async function startUssd() {
+    const dialInput = document.getElementById("dialInput").value.trim();
+    if (dialInput !== "*123#") {
+      alert("Invalid Service Code! Dial *123# for AgriMove AI.");
+      return;
+    }
+    
+    // Open USSD popup
+    const overlay = document.getElementById("ussdOverlay");
+    overlay.classList.add("active");
+    
+    const content = document.getElementById("ussdContent");
+    const loader = document.getElementById("ussdLoading");
+    const inputArea = document.getElementById("ussdInputArea");
+    
+    content.style.display = "none";
+    inputArea.style.display = "none";
+    loader.style.display = "block";
+    
+    // Reset session variables
+    currentUssdSessionId = "session_" + Math.random().toString(36).substr(2, 9);
+    ussdTextAccumulator = "";
+    document.getElementById("ussdResponseInput").value = "";
+    
+    // Make call to api
+    await callUssdApi("");
+  }
+
+  async function callUssdApi(textValue) {
+    const content = document.getElementById("ussdContent");
+    const loader = document.getElementById("ussdLoading");
+    const inputArea = document.getElementById("ussdInputArea");
+    
+    try {
+      const formData = new FormData();
+      formData.append("sessionId", currentUssdSessionId);
+      formData.append("serviceCode", "*123#");
+      formData.append("phoneNumber", "+254712490330"); // Amina's simulated phone
+      formData.append("text", textValue);
+      
+      const response = await fetch("/api/ussd", {
+        method: "POST",
+        body: formData
+      });
+      
+      const data = await response.text();
+      loader.style.display = "none";
+      content.style.display = "block";
+      
+      if (data.startsWith("CON")) {
+        const menuText = data.substring(4).replace(/\n/g, "<br>");
+        content.innerHTML = menuText;
+        inputArea.style.display = "flex";
+        document.getElementById("ussdResponseInput").focus();
+      } else if (data.startsWith("END")) {
+        const endText = data.substring(4).replace(/\n/g, "<br>");
+        content.innerHTML = endText;
+        inputArea.style.display = "none";
+        
+        // Push an SMS simulating that the flow ended and notifications are sent
+        setTimeout(() => {
+          addSimulatedSms("AgriMove AI", endText.replace(/<br>/g, "\n"));
+        }, 1500);
+        
+        // Auto close after 5 seconds
+        setTimeout(() => {
+          if (document.getElementById("ussdOverlay").classList.contains("active") && inputArea.style.display === "none") {
+            closeUssd();
+          }
+        }, 6000);
+      } else {
+        content.innerHTML = "Error parsing network response. Please try again.";
+        inputArea.style.display = "none";
+      }
+      
+    } catch (e) {
+      loader.style.display = "none";
+      content.style.display = "block";
+      content.innerHTML = "Network connection failed. Sandbox offline.";
+    }
+  }
+
+  function submitUssdResponse() {
+    const inputField = document.getElementById("ussdResponseInput");
+    const inputVal = inputField.value.trim();
+    if (inputVal === "") return;
+    
+    const content = document.getElementById("ussdContent");
+    const loader = document.getElementById("ussdLoading");
+    const inputArea = document.getElementById("ussdInputArea");
+    
+    content.style.display = "none";
+    inputArea.style.display = "none";
+    loader.style.display = "block";
+    
+    // Accumulate inputs separated by asterisk
+    if (ussdTextAccumulator === "") {
+      ussdTextAccumulator = inputVal;
+    } else {
+      ussdTextAccumulator += "*" + inputVal;
+    }
+    
+    inputField.value = "";
+    callUssdApi(ussdTextAccumulator);
+  }
+
+  function closeUssd() {
+    document.getElementById("ussdOverlay").classList.remove("active");
+    clearDialer();
+  }
+  
+  function addSimulatedSms(sender, message) {
+    const list = document.getElementById("smsList");
+    const empty = list.querySelector(".sms-empty");
+    if (empty) empty.remove();
+    
+    const now = new Date();
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    
+    const sms = document.createElement("div");
+    sms.className = "sms-bubble animate-in";
+    sms.innerHTML = `
+      <div class="sms-sender">${sender}</div>
+      <div class="sms-body">${message.replace(/\n/g, '<br>')}</div>
+      <div class="sms-time">${timeStr}</div>
+    `;
+    
+    list.insertBefore(sms, list.firstChild);
+    
+    // Increment badge count if dialer tab is open
+    if (!document.getElementById("smsView").classList.contains("active")) {
+      smsCount++;
+      const badge = document.getElementById("smsBadge");
+      badge.textContent = smsCount;
+      badge.style.display = "inline-block";
+    }
+    
+    // Trigger web-level SMS notification card in workspace
+    if (window.showSmsToast) {
+      window.showSmsToast(sender, message);
+    }
+  }
+
+  async function runJourneySimulation(btn, reqId, mode) {
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = mode === "full" ? "Running..." : "Moving...";
+
+    try {
+      const response = await fetch(`/simulate/gps/${reqId}${mode === "full" ? "/full" : ""}`, {
+        method: "POST"
+      });
+      const data = await response.json();
+      if (!data.success) throw new Error("Simulation failed");
+
+      addSimulatedSms(
+        "AgriMove GPS",
+        `Shipment #${reqId}: ${data.status}. GPS ${data.progress}% complete (${data.latitude}, ${data.longitude}).`
+      );
+
+      if (data.status === "Delivered") {
+        const row = btn.closest("tr");
+        const badge = row.querySelector(".status-badge");
+        badge.textContent = "Delivered";
+        badge.className = "status-badge status-delivered";
+      }
+    } catch (e) {
+      alert("GPS simulation failed. Please check the Flask server logs.");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+
+  function simulateJourneyStep(btn, reqId) {
+    runJourneySimulation(btn, reqId, "step");
+  }
+
+  function simulateFullJourney(btn, reqId) {
+    runJourneySimulation(btn, reqId, "full");
+  }
+</script>
+{% endblock %}

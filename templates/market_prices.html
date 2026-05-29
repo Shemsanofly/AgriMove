@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Market Prices | AgriMove AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="market-container">
+        <header class="market-header">
+            <div class="container">
+                <a href="{{ url_for('farmer_dashboard') }}" class="back-link">← Farmer Dashboard</a>
+                <h1>💰 Market Price Transparency</h1>
+                <p>Real-time crop prices across different regions</p>
+            </div>
+        </header>
+
+        <main class="container market-main">
+            <div class="market-toolbar">
+                <div class="search-box">
+                    <input type="text" id="searchCrop" placeholder="Search crop..." onkeyup="filterCrops()" />
+                </div>
+                <a href="{{ url_for('profit_estimator_page') }}" class="btn btn-primary">💡 Use Profit Estimator</a>
+            </div>
+
+            <div class="crops-list" id="cropsList">
+                {% for crop in crops %}
+                <div class="crop-section card" data-crop="{{ crop }}">
+                    <div class="crop-header">
+                        <h2>🌾 {{ crop }}</h2>
+                        <button class="btn btn-secondary btn-sm" onclick="toggleChart('chart-{{ crop|replace(' ', '-') }}')">📊 Show Chart</button>
+                    </div>
+
+                    <div class="table-responsive">
+                        <table class="market-table">
+                            <thead>
+                                <tr>
+                                    <th>Region</th>
+                                    <th class="center">Price</th>
+                                    <th class="center">Demand</th>
+                                    <th class="center">Trend</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% set best_price = market_data[crop]|map(attribute='price')|max %}
+                                {% for market in market_data[crop] %}
+                                <tr {% if market.price == best_price %}class="best-price"{% endif %}>
+                                    <td>
+                                        <strong>{{ market.region }}</strong>
+                                        {% if market.price == best_price %}<span class="badge best">BEST</span>{% endif %}
+                                    </td>
+                                    <td class="center">
+                                        <span class="price-value">{{ "{:,.0f}".format(market.price) }}</span>
+                                    </td>
+                                    <td class="center">
+                                        <span class="demand-badge {% if market.demand_level == 'High' %}high{% elif market.demand_level == 'Low' %}low{% endif %}">
+                                            {{ market.demand_level }}
+                                        </span>
+                                    </td>
+                                    <td class="center">
+                                        <span class="trend-badge {% if market.trend == 'Rising' %}rising{% elif market.trend == 'Falling' %}falling{% endif %}">
+                                            {% if market.trend == 'Rising' %}📈{% elif market.trend == 'Falling' %}📉{% else %}➡️{% endif %}
+                                            {{ market.trend }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <canvas id="chart-{{ crop|replace(' ', '-') }}" class="market-chart" style="display: none; max-height: 300px; margin-top: 20px;"></canvas>
+                </div>
+                {% endfor %}
+            </div>
+
+            <section class="card market-insights">
+                <h2>📊 Market Insights</h2>
+                <div class="insights-grid">
+                    <div class="insight-card">
+                        <h3>Highest Paying Markets</h3>
+                        <div class="insights-list">
+                            <div class="insight-item">
+                                <span>Rice (Mwanza)</span>
+                                <strong>210,000 TZS</strong>
+                            </div>
+                            <div class="insight-item">
+                                <span>Beans (Dar es Salaam)</span>
+                                <strong>180,000 TZS</strong>
+                            </div>
+                            <div class="insight-item">
+                                <span>Tomatoes (Dodoma)</span>
+                                <strong>145,000 TZS</strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insight-card">
+                        <h3>Rising Prices 📈</h3>
+                        <div class="insights-list">
+                            <div class="insight-item">
+                                <span>Maize (Arusha)</span>
+                                <span class="trend-up">+2.5%</span>
+                            </div>
+                            <div class="insight-item">
+                                <span>Beans (Arusha)</span>
+                                <span class="trend-up">+3.1%</span>
+                            </div>
+                            <div class="insight-item">
+                                <span>Potatoes (Arusha)</span>
+                                <span class="trend-up">+1.8%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insight-card">
+                        <h3>Falling Prices 📉</h3>
+                        <div class="insights-list">
+                            <div class="insight-item">
+                                <span>Tomatoes (Dar es Salaam)</span>
+                                <span class="trend-down">-5.2%</span>
+                            </div>
+                            <div class="insight-item">
+                                <span>Cabbage (Arusha)</span>
+                                <span class="trend-down">-2.8%</span>
+                            </div>
+                            <div class="insight-item">
+                                <span>Beans (Dodoma)</span>
+                                <span class="trend-down">-1.5%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="insight-card">
+                        <h3>High Demand 🔥</h3>
+                        <div class="insights-list">
+                            <div class="insight-item">
+                                <span>Beans across all regions</span>
+                                <span class="demand-high">High</span>
+                            </div>
+                            <div class="insight-item">
+                                <span>Rice in Mwanza & Dar</span>
+                                <span class="demand-high">High</span>
+                            </div>
+                            <div class="insight-item">
+                                <span>Maize in Dodoma</span>
+                                <span class="demand-high">High</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card tips-section">
+                <h2>💡 Tips for Maximizing Profits</h2>
+                <div class="tips-grid">
+                    <div class="tip">
+                        <div class="tip-icon">🎯</div>
+                        <h4>Target High Demand Markets</h4>
+                        <p>Look for regions with "High" demand levels. These markets pay premium prices and have quick turnarounds.</p>
+                    </div>
+                    <div class="tip">
+                        <div class="tip-icon">📈</div>
+                        <h4>Follow Price Trends</h4>
+                        <p>Wait for "Rising" trends before harvesting. Time your deliveries when prices are trending upward.</p>
+                    </div>
+                    <div class="tip">
+                        <div class="tip-icon">🚚</div>
+                        <h4>Optimize Transport Costs</h4>
+                        <p>Use the Profit Estimator to calculate best routes. Lower transport = higher profit margin.</p>
+                    </div>
+                    <div class="tip">
+                        <div class="tip-icon">🤝</div>
+                        <h4>Pool Resources</h4>
+                        <p>Combine with other farmers to reach minimum volumes. Bulk shipments reduce per-unit transport costs.</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <style>
+        .market-container {
+            background: var(--bg-light);
+            min-height: 100vh;
+        }
+
+        .market-header {
+            background: linear-gradient(135deg, var(--green), var(--gold));
+            color: var(--white);
+            padding: 40px 0;
+            margin-bottom: 30px;
+        }
+
+        .market-header h1 {
+            font-size: 2.4rem;
+            margin: 12px 0;
+        }
+
+        .back-link {
+            color: var(--white);
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .market-main {
+            display: grid;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .market-toolbar {
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .search-box {
+            flex: 1;
+            max-width: 400px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid rgba(47, 125, 50, 0.2);
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .crops-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .crop-section {
+            padding: 24px;
+        }
+
+        .crop-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 2px solid rgba(47, 125, 50, 0.1);
+        }
+
+        .crop-header h2 {
+            color: var(--dark);
+            margin: 0;
+            font-size: 1.6rem;
+        }
+
+        .market-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .market-table thead {
+            background: rgba(47, 125, 50, 0.08);
+        }
+
+        .market-table th {
+            padding: 14px;
+            text-align: left;
+            color: var(--dark);
+            font-weight: 700;
+            border-bottom: 2px solid rgba(47, 125, 50, 0.2);
+        }
+
+        .market-table th.center {
+            text-align: center;
+        }
+
+        .market-table td {
+            padding: 14px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            color: var(--dark);
+        }
+
+        .market-table td.center {
+            text-align: center;
+        }
+
+        .market-table tr.best-price {
+            background: rgba(242, 193, 78, 0.15);
+            font-weight: 600;
+        }
+
+        .price-value {
+            font-weight: 700;
+            color: var(--green);
+            font-size: 1.1rem;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            margin-left: 8px;
+        }
+
+        .badge.best {
+            background: var(--gold);
+            color: var(--dark);
+        }
+
+        .demand-badge,
+        .trend-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .demand-badge.high {
+            background: rgba(76, 175, 80, 0.2);
+            color: #2E7D32;
+        }
+
+        .demand-badge.low {
+            background: rgba(244, 67, 54, 0.2);
+            color: #d32f2f;
+        }
+
+        .trend-badge.rising {
+            background: rgba(76, 175, 80, 0.2);
+            color: #2E7D32;
+        }
+
+        .trend-badge.falling {
+            background: rgba(244, 67, 54, 0.2);
+            color: #d32f2f;
+        }
+
+        .market-chart {
+            width: 100%;
+        }
+
+        .market-insights {
+            padding: 32px;
+        }
+
+        .market-insights h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+            font-size: 1.8rem;
+        }
+
+        .insights-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .insight-card {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.08), rgba(242, 193, 78, 0.05));
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .insight-card h3 {
+            color: var(--dark);
+            margin-bottom: 16px;
+        }
+
+        .insights-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .insight-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .insight-item span {
+            color: var(--muted);
+            font-size: 0.95rem;
+        }
+
+        .insight-item strong {
+            color: var(--green);
+            font-weight: 700;
+        }
+
+        .trend-up {
+            color: #4CAF50;
+            font-weight: 700;
+        }
+
+        .trend-down {
+            color: #f44336;
+            font-weight: 700;
+        }
+
+        .demand-high {
+            background: rgba(76, 175, 80, 0.2);
+            color: #2E7D32;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+
+        .tips-section {
+            padding: 32px;
+        }
+
+        .tips-section h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+            font-size: 1.8rem;
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .tip {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.08), rgba(242, 193, 78, 0.05));
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .tip-icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+        }
+
+        .tip h4 {
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .tip p {
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        @media (max-width: 768px) {
+            .market-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .market-toolbar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .search-box {
+                max-width: 100%;
+            }
+
+            .crop-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .insights-grid,
+            .tips-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script>
+        function filterCrops() {
+            const search = document.getElementById('searchCrop').value.toLowerCase();
+            const crops = document.querySelectorAll('[data-crop]');
+            crops.forEach(crop => {
+                const name = crop.dataset.crop.toLowerCase();
+                crop.style.display = name.includes(search) ? 'block' : 'none';
+            });
+        }
+
+        function toggleChart(chartId) {
+            const canvas = document.getElementById(chartId);
+            if (canvas.style.display === 'none') {
+                canvas.style.display = 'block';
+                initChart(chartId);
+            } else {
+                canvas.style.display = 'none';
+            }
+        }
+
+        function initChart(chartId) {
+            if (window.charts && window.charts[chartId]) return;
+
+            const crop = chartId.replace('chart-', '').replace(/-/g, ' ');
+            const table = document.querySelector(`[data-crop="${crop}"] .market-table`);
+            const rows = table.querySelectorAll('tbody tr');
+            
+            const regions = [];
+            const prices = [];
+            rows.forEach(row => {
+                const regionCell = row.querySelector('td:first-child');
+                const priceCell = row.querySelector('td:nth-child(2)');
+                const region = regionCell.textContent.trim().split('\n')[0];
+                const price = parseFloat(priceCell.textContent.replace(/[^0-9.-]+/g, ''));
+                regions.push(region);
+                prices.push(price);
+            });
+
+            const ctx = document.getElementById(chartId).getContext('2d');
+            window.charts = window.charts || {};
+            window.charts[chartId] = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: regions,
+                    datasets: [{
+                        label: `${crop} Price (TZS)`,
+                        data: prices,
+                        backgroundColor: 'rgba(47, 125, 50, 0.5)',
+                        borderColor: 'rgba(47, 125, 50, 1)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { formatter: (v) => v.toLocaleString() }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
