@@ -1,6 +1,7 @@
 import os
 import random
 import sqlite3
+import logging
 from datetime import datetime, timedelta
 import json
 
@@ -23,8 +24,11 @@ from sms_service import (
 
 init_sms_client()
 
+from services.ussd_service import handle_ussd
+
 app = Flask(__name__)
 app.secret_key = "agrimove-ai-secret"
+logger = logging.getLogger(__name__)
 
 
 @app.context_processor
@@ -76,6 +80,16 @@ MARKET_REGIONS = [
     "Ibadan",
 ]
 
+# Shorter lists for USSD (182-char screen limit, Tanzania focus)
+USSD_CROPS = ["Maize", "Rice", "Tomatoes", "Beans"]
+USSD_REGIONS = ["Dar es Salaam", "Dodoma", "Arusha", "Mwanza"]
+USSD_PICKUP_LOCATIONS = [
+    "Morogoro Farm Gate",
+    "Mvomero Cooperative",
+    "Moshi Highland Farms",
+    "Ifakara Collection Point",
+]
+
 LOCATION_COORDS = {
     "Morogoro Farm Gate": (-6.8200, 37.6600),
     "Mvomero Cooperative": (-6.3000, 37.4500),
@@ -101,6 +115,9 @@ LOCATION_COORDS = {
 
 
 # SMS integration — see sms_service.py
+
+AT_USERNAME = os.environ.get("AT_USERNAME", "sandbox")
+AT_API_KEY = os.environ.get("AT_API_KEY")
 
 
 def dispatch_notification(conn, message, request_id=None, phone=None):
@@ -535,9 +552,15 @@ def get_best_market(crop_name, quantity, transport_costs_by_region, conn=None):
 
 @app.get("/api/africas-talking/status")
 def africas_talking_status():
-    """Return current Africa's Talking integration mode without exposing secrets."""
+    """Return Africa's Talking SMS and USSD integration status without exposing secrets."""
     sim_ok = check_simulator_reachable()
     cred_ok, cred_msg = verify_at_credentials()
+    public_callback = os.environ.get("USSD_PUBLIC_URL", "").rstrip("/")
+    if public_callback:
+        ussd_callback = f"{public_callback}/ussd"
+    else:
+        ussd_callback = url_for("ussd", _external=True)
+
     return jsonify({
         "sms_enabled": sms_status["enabled"],
         "credentials_valid": cred_ok,
@@ -557,6 +580,16 @@ def africas_talking_status():
                 "SMS still sends via API (check sandbox SMS Outbox in AT dashboard), or try mobile hotspot."
             )
         ),
+        "api_key_set": bool(AT_API_KEY),
+        "ussd_callback": ussd_callback,
+        "ussd_setup": {
+            "step_1": "Run Flask: python app.py (port 5000)",
+            "step_2": "Expose port 5000 with ngrok: ngrok http 5000  (NOT port 80)",
+            "step_3": "Set USSD_PUBLIC_URL in .env to your ngrok HTTPS URL (e.g. https://xxxx.ngrok-free.app)",
+            "step_4": "In Africa's Talking Sandbox → USSD → Service Codes → set Callback URL to the ussd_callback value above",
+            "step_5": "Use the AT Sandbox USSD Simulator and dial YOUR assigned service code (e.g. *384*1100#)",
+            "note": "The default AT message means your callback URL is missing, wrong, or unreachable.",
+        },
     })
 
 
@@ -1963,6 +1996,80 @@ def farmer_offers(farmer_id):
     )
 
 
+@app.route("/ussd-simulator")
+def ussd_simulator():
+    conn = get_db_connection()
+    prices = conn.execute("SELECT * FROM market_prices ORDER BY crop_name_swahili").fetchall()
+    pools = conn.execute("SELECT * FROM transport_pools WHERE status = 'open'").fetchall()
+    storage = conn.execute("SELECT * FROM storage_facilities ORDER BY name").fetchall()
+    transactions = conn.execute("SELECT * FROM transactions ORDER BY id DESC LIMIT 10").fetchall()
+    conn.close()
+    return render_template(
+        "ussd_simulator.html",
+        active="ussd",
+        heading="USSD Demo Simulator",
+        subheading="Simulate Tanzania *384# USSD menu flow to check prices, find transport pools, locate storage, and view escrow payments.",
+        prices=[dict(row) for row in prices],
+        pools=[dict(row) for row in pools],
+        storage=[dict(row) for row in storage],
+        transactions=[dict(row) for row in transactions]
+    )
+
+
+def _build_ussd_response():
+    """Shared handler for Africa's Talking USSD POST callbacks."""
+    session_id = request.values.get("sessionId", "")
+    service_code = request.values.get("serviceCode", "")
+    phone_number = request.values.get("phoneNumber", "")
+    text = request.values.get("text", "")
+
+    logger.info(
+        "USSD request session=%s service=%s phone=%s text=%r",
+        session_id,
+        service_code,
+        phone_number,
+        text,
+    )
+
+    try:
+        body = handle_ussd(
+            text,
+            phone_number,
+            session_id,
+            service_code,
+            crops=USSD_CROPS,
+            regions=USSD_REGIONS,
+            pickup_locations=USSD_PICKUP_LOCATIONS,
+            get_db_connection=get_db_connection,
+            assign_driver=assign_driver,
+            dispatch_notification=dispatch_notification,
+            estimate_profit=estimate_profit,
+        ).strip()
+    except Exception as exc:
+        logger.exception("USSD handler error: %s", exc)
+        body = "END Samahani, kuna hitilafu. Jaribu tena."
+
+    if not body.startswith(("CON ", "CON\n", "END ", "END\n", "CON")):
+        logger.error("Invalid USSD response (must start with CON or END): %r", body[:80])
+        body = "END Samahani, kuna hitilafu. Jaribu tena."
+
+    return body, 200, {"Content-Type": "text/plain; charset=utf-8"}
+
+
+@app.route("/ussd", methods=["GET", "POST"])
+def ussd():
+    """Africa's Talking USSD callback (primary webhook URL)."""
+    if request.method == "GET":
+        return "END AgriMove USSD endpoint is online.", 200, {"Content-Type": "text/plain; charset=utf-8"}
+    return _build_ussd_response()
+
+
+@app.post("/api/ussd")
+def api_ussd():
+    """Legacy alias for Africa's Talking USSD sandbox testing."""
+    return _build_ussd_response()
+
+
 # ============== AI MARKET INTELLIGENCE ==============
 
 @app.route("/market/insights")
@@ -2830,5 +2937,6 @@ def ivr_storage():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # use_reloader=False keeps USSD stable (AT times out if Flask restarts mid-request)
+    app.run(debug=True, use_reloader=False)
 
