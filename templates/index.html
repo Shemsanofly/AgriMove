@@ -10,20 +10,20 @@
     <header class="header" id="home">
       <nav class="navbar">
         <div class="container nav-content">
-          <a class="logo" href="#home">AgriMove <span>AI</span></a>
+          <a class="logo" href="/">AgriMove <span>AI</span></a>
           <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
             <span></span>
             <span></span>
             <span></span>
           </button>
           <div class="nav-links">
-            <a href="{{ url_for('farmer_dashboard') }}">Farmer Dashboard</a>
-            <a href="{{ url_for('market_insights') }}">💡 AI Insights</a>
-            <a href="{{ url_for('ussd_simulator') }}">📱 USSD Simulator</a>
-            <a href="{{ url_for('driver_dashboard') }}">Driver Dashboard</a>
-            <a href="{{ url_for('buyer_marketplace') }}">Buyer Marketplace</a>
-            <a href="{{ url_for('admin_dashboard') }}">Admin Dashboard</a>
-            <a href="{{ url_for('help_page') }}">❓ Help</a>
+            <a href="/market-prices" data-en="Bei za Soko" data-sw="Bei za Soko">Bei za Soko</a>
+            <a href="/transport" data-en="Shamba Connect" data-sw="Shamba Connect">Shamba Connect</a>
+            <a href="/payments" data-en="Malango Salama" data-sw="Malango Salama">Malango Salama</a>
+            <a href="/storage" data-en="Hifadhi Yangu" data-sw="Hifadhi Yangu">Hifadhi Yangu</a>
+            <a href="/ussd-simulator" data-en="USSD Demo" data-sw="USSD Demo">USSD Demo</a>
+            <a href="{{ url_for('farmer_dashboard') }}" data-en="Dashboard" data-sw="Dashibodi">Dashboard</a>
+            <button id="langToggleBtn" class="btn btn-ghost" style="padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: 1.5px solid var(--green); margin-left: 8px;">🇹🇿 SW</button>
           </div>
         </div>
       </nav>
@@ -92,6 +92,27 @@
     </header>
 
     <main>
+      <!-- Farmer Statistics Strip (Tanzania) -->
+      <section style="background: linear-gradient(135deg, var(--green-light), rgba(242, 193, 78, 0.1)); border-bottom: 2px solid rgba(47, 125, 50, 0.15); padding: 25px 0;">
+        <div class="container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; align-items: center; text-align: center;">
+          <div style="background: var(--card-bg); padding: 18px; border-radius: 14px; box-shadow: var(--shadow); border: 1.5px solid rgba(47, 125, 50, 0.2);">
+            <span style="font-size: 2.2rem;">👨‍🌾</span>
+            <h4 data-en="Farmers Joined" data-sw="Wakulima Waliojiunga" style="margin: 8px 0 4px; color: var(--muted); font-size: 0.9rem; text-transform: uppercase; font-weight: 700;">Farmers Joined</h4>
+            <div style="font-size: 1.8rem; font-weight: 800; color: var(--green-dark);">{{ farmers_count }}</div>
+          </div>
+          <div style="background: var(--card-bg); padding: 18px; border-radius: 14px; box-shadow: var(--shadow); border: 1.5px solid rgba(47, 125, 50, 0.2);">
+            <span style="font-size: 2.2rem;">🌽</span>
+            <h4 data-en="Today's Maize Price" data-sw="Bei ya Leo ya Mahindi" style="margin: 8px 0 4px; color: var(--muted); font-size: 0.9rem; text-transform: uppercase; font-weight: 700;">Today's Maize Price</h4>
+            <div style="font-size: 1.8rem; font-weight: 800; color: var(--green-dark);">{{ "{:,.0f}".format(maize_price) }} TSh/Kg</div>
+          </div>
+          <div style="background: var(--card-bg); padding: 18px; border-radius: 14px; box-shadow: var(--shadow); border: 1.5px solid rgba(47, 125, 50, 0.2);">
+            <span style="font-size: 2.2rem;">🚛</span>
+            <h4 data-en="Loads Pooled" data-sw="Mzigo Uliounganishwa" style="margin: 8px 0 4px; color: var(--muted); font-size: 0.9rem; text-transform: uppercase; font-weight: 700;">Loads Pooled</h4>
+            <div style="font-size: 1.8rem; font-weight: 800; color: var(--green-dark);">{{ loads_count }}</div>
+          </div>
+        </div>
+      </section>
+
       <section id="features" class="section features">
         <div class="container">
           <div class="section-header reveal">
@@ -266,5 +287,305 @@
     </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-  </body>
+    <script>
+      const langToggleBtn = document.getElementById("langToggleBtn");
+      
+      function setLanguage(lang) {
+        localStorage.setItem("agrimove_lang", lang);
+        
+        const localizable = document.querySelectorAll("[data-en][data-sw]");
+        localizable.forEach(el => {
+          el.textContent = lang === "sw" ? el.getAttribute("data-sw") : el.getAttribute("data-en");
+        });
+
+        if (lang === "sw") {
+          langToggleBtn.textContent = "🇬🇧 EN";
+        } else {
+          langToggleBtn.textContent = "🇹🇿 SW";
+        }
+      }
+
+      if (langToggleBtn) {
+        langToggleBtn.addEventListener("click", () => {
+          const currentLang = localStorage.getItem("agrimove_lang") || "en";
+          const newLang = currentLang === "en" ? "sw" : "en";
+          setLanguage(newLang);
+        });
+
+        // Initialize language from localStorage
+        const savedLang = localStorage.getItem("agrimove_lang") || "en";
+        setLanguage(savedLang);
+      }
+    </script>
+  
+<!-- AgriMove AI Voice Assistant -->
+<div id="chatbot-container">
+  
+  <!-- Floating Button -->
+  <button id="chatbot-toggle" onclick="toggleChatbot()"
+    style="
+      position: fixed;
+      bottom: 25px;
+      right: 25px;
+      width: 65px;
+      height: 65px;
+      border-radius: 50%;
+      background: #2E7D32;
+      color: white;
+      font-size: 28px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    ">
+    🎙️
+  </button>
+
+  <!-- Chat Window -->
+  <div id="chatbot-window" style="
+      display: none;
+      position: fixed;
+      bottom: 100px;
+      right: 25px;
+      width: 320px;
+      height: 450px;
+      background: white;
+      border-radius: 15px;
+      box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+      z-index: 9998;
+      flex-direction: column;
+      overflow: hidden;
+    ">
+    
+    <!-- Header -->
+    <div style="
+        background: #2E7D32;
+        color: white;
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      ">
+      <span style="font-size:24px;">🌾</span>
+      <div>
+        <div style="font-weight:bold;font-size:16px;">
+          AgriMove Msaidizi
+        </div>
+        <div style="font-size:11px;opacity:0.8;">
+          Msaidizi wa Kilimo • Online
+        </div>
+      </div>
+      <button onclick="toggleChatbot()" style="
+          margin-left:auto;
+          background:none;
+          border:none;
+          color:white;
+          font-size:20px;
+          cursor:pointer;
+        ">✕</button>
+    </div>
+
+    <!-- Messages Area -->
+    <div id="chat-messages" style="
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+        background: #F5F5F5;
+        height: 300px;
+      ">
+      <!-- Welcome message -->
+      <div class="bot-message" style="
+          background: white;
+          border-radius: 10px;
+          padding: 10px 12px;
+          margin-bottom: 10px;
+          font-size: 14px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+          max-width: 85%;
+        ">
+        🌾 Karibu AgriMove! Mimi ni msaidizi wako. 
+        Niulize kuhusu bei za mazao, usafiri, 
+        au hifadhi. Naweza kukusaidia kwa Kiswahili!
+        <br><br>
+        <button onclick="speakText(this.parentElement.innerText)"
+          style="background:none;border:none;cursor:pointer;
+                 font-size:16px;">🔊</button>
+      </div>
+    </div>
+
+    <!-- Input Area -->
+    <div style="
+        padding: 10px;
+        background: white;
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      ">
+      <input type="text" 
+        id="chat-input" 
+        placeholder="Andika swali lako hapa..."
+        onkeypress="if(event.key==='Enter') sendMessage()"
+        style="
+          flex: 1;
+          padding: 10px;
+          border: 1px solid #ddd;
+          border-radius: 20px;
+          font-size: 14px;
+          outline: none;
+        ">
+      <button onclick="startVoiceInput()" 
+        id="mic-btn"
+        title="Zungumza"
+        style="
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          background: #E8F5E9;
+          border: none;
+          cursor: pointer;
+          font-size: 18px;
+        ">🎤</button>
+      <button onclick="sendMessage()" style="
+          width: 38px;
+          height: 38px;
+          border-radius: 50%;
+          background: #2E7D32;
+          border: none;
+          cursor: pointer;
+          font-size: 18px;
+        ">➤</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// Toggle chatbot open/close
+function toggleChatbot() {
+  const window = document.getElementById('chatbot-window');
+  window.style.display = 
+    window.style.display === 'none' ? 'flex' : 'none';
+  window.style.flexDirection = 'column';
+}
+
+// Send text message to AI
+async function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const message = input.value.trim();
+  if (!message) return;
+  
+  // Show user message
+  addMessage(message, 'user');
+  input.value = '';
+  
+  // Show typing indicator
+  addMessage('...inaandika jibu', 'bot', 'typing-msg');
+  
+  try {
+    const response = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: message})
+    });
+    const data = await response.json();
+    
+    // Remove typing indicator
+    const typing = document.getElementById('typing-msg');
+    if (typing) typing.remove();
+    
+    // Show AI response
+    addMessage(data.reply, 'bot');
+    
+    // Auto speak the response
+    if (data.audio_url) {
+      const audio = new Audio(data.audio_url);
+      audio.play();
+    }
+    
+  } catch (error) {
+    const typing = document.getElementById('typing-msg');
+    if (typing) typing.remove();
+    addMessage('Samahani, kuna hitilafu. Jaribu tena.', 'bot');
+  }
+}
+
+// Add message bubble to chat
+function addMessage(text, sender, id='') {
+  const messages = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  if (id) div.id = id;
+  
+  div.style.cssText = `
+    background: ${sender === 'user' ? '#2E7D32' : 'white'};
+    color: ${sender === 'user' ? 'white' : 'black'};
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    max-width: 85%;
+    margin-left: ${sender === 'user' ? 'auto' : '0'};
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  `;
+  
+  div.innerHTML = text;
+  
+  // Add speaker button to bot messages
+  if (sender === 'bot' && id !== 'typing-msg') {
+    div.innerHTML += `
+      <br><button onclick="speakText('${text.replace(/'/g, '')}')"
+        style="background:none;border:none;
+               cursor:pointer;font-size:14px;
+               margin-top:5px;">🔊 Sikiliza</button>`;
+  }
+  
+  messages.appendChild(div);
+  messages.scrollTop = messages.scrollHeight;
+}
+
+// Text to speech
+async function speakText(text) {
+  const response = await fetch('/api/voice/speak', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({text: text})
+  });
+  const data = await response.json();
+  if (data.audio_url) {
+    const audio = new Audio(data.audio_url);
+    audio.play();
+  }
+}
+
+// Voice input (speech to text)
+function startVoiceInput() {
+  if (!('webkitSpeechRecognition' in window)) {
+    alert('Kivinjari chako hakisaidii sauti. Tumia Chrome.');
+    return;
+  }
+  
+  const recognition = new webkitSpeechRecognition();
+  recognition.lang = 'sw-TZ';
+  recognition.interimResults = false;
+  
+  document.getElementById('mic-btn').textContent = '🔴';
+  
+  recognition.onresult = function(event) {
+    const text = event.results[0][0].transcript;
+    document.getElementById('chat-input').value = text;
+    document.getElementById('mic-btn').textContent = '🎤';
+    sendMessage();
+  };
+  
+  recognition.onerror = function() {
+    document.getElementById('mic-btn').textContent = '🎤';
+    alert('Hitilafu ya sauti. Jaribu tena.');
+  };
+  
+  recognition.start();
+}
+</script>
+</body>
 </html>

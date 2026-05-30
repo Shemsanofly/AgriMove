@@ -1,0 +1,403 @@
+{% extends "dashboard_base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 1000px; padding: 20px 0;">
+    <!-- Escrow Info Banner -->
+    <div style="background: linear-gradient(135deg, #1f5c24, #2f7d32); color: white; padding: 20px; border-radius: 16px; margin-bottom: 30px; box-shadow: var(--shadow); position: relative; overflow: hidden;">
+        <div style="position: relative; z-index: 1;">
+            <h3 style="margin: 0 0 6px 0; font-size: 1.4rem; font-weight: 700;">🔒 Malango Salama (M-Pesa Escrow)</h3>
+            <p style="margin: 0; font-size: 1.05rem; font-weight: 500; opacity: 0.95;">
+                Pesa inashikiliwa salama hadi uwasilishaji. Inamlinda mkulima asidhulumiwe na madalali na kumpa mnunuzi uhakika wa kupata mzigo.
+            </p>
+        </div>
+        <div style="position: absolute; right: -20px; bottom: -30px; font-size: 8rem; opacity: 0.15; font-weight: 900; line-height: 1; pointer-events: none;">
+            TZ
+        </div>
+    </div>
+
+    <!-- Main Payment Flow Grid -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; align-items: start;">
+        
+        <!-- Left: Payment Form & Active Muamala Status -->
+        <div style="background: var(--card-bg); padding: 26px; border-radius: 20px; box-shadow: var(--shadow); border: 2px solid var(--green);">
+            <!-- Wizard Headers -->
+            <div style="display: flex; justify-content: space-around; border-bottom: 2px solid rgba(0,0,0,0.06); padding-bottom: 12px; margin-bottom: 24px;">
+                <span id="step1-header" style="font-weight: 700; color: var(--green); font-size: 0.95rem; border-bottom: 2px solid var(--green); padding-bottom: 10px;">1. Weka Maelezo</span>
+                <span id="step2-header" style="font-weight: 700; color: var(--muted); font-size: 0.95rem; padding-bottom: 10px;">2. Thibitisha Malipo</span>
+            </div>
+
+            <!-- Step 1: Input Form -->
+            <form id="escrowFormStep1" onsubmit="goToStep2(event)">
+                <div class="form-group">
+                    <label for="buyer_name">Jina la Mnunuzi</label>
+                    <input type="text" id="buyer_name" placeholder="John Mashaka" required style="border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; padding: 12px;">
+                </div>
+                <div class="form-group">
+                    <label for="buyer_phone">Simu ya Mnunuzi (Tuma M-Pesa hapa)</label>
+                    <input type="tel" id="buyer_phone" placeholder="+255..." required style="border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; padding: 12px;">
+                </div>
+                <div class="form-group">
+                    <label for="farmer_name">Jina la Mkulima</label>
+                    <input type="text" id="farmer_name" placeholder="Mama Maria" required style="border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; padding: 12px;">
+                </div>
+                <div class="form-group">
+                    <label for="farmer_phone">Simu ya Mkulima (Kupokea M-Pesa)</label>
+                    <input type="tel" id="farmer_phone" placeholder="+255..." required style="border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; padding: 12px;">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                        <label for="crop_type">Aina ya Zao</label>
+                        <select id="crop_type" required style="border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; padding: 12px; background: var(--card-bg); color: var(--text);">
+                            <option value="Mahindi">Mahindi</option>
+                            <option value="Mpunga">Mpunga</option>
+                            <option value="Muhogo">Muhogo</option>
+                            <option value="Nyanya">Nyanya</option>
+                            <option value="Vitunguu">Vitunguu</option>
+                            <option value="Kahawa">Kahawa</option>
+                            <option value="Korosho">Korosho</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="quantity_kg">Uzito (Kilo)</label>
+                        <input type="number" id="quantity_kg" placeholder="1000" min="1" required oninput="calculateTotal()" style="border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; padding: 12px;">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="price_per_kg">Bei kwa Kilo (TSh)</label>
+                    <input type="number" id="price_per_kg" placeholder="900" min="1" required oninput="calculateTotal()" style="border: 1px solid rgba(0,0,0,0.15); border-radius: 8px; padding: 12px;">
+                </div>
+
+                <div style="background: rgba(47, 125, 50, 0.08); padding: 12px; border-radius: 10px; margin-bottom: 20px; text-align: center; border: 1px dashed var(--green);">
+                    <span style="font-size: 0.85rem; color: var(--muted); font-weight: 500;">Jumla ya Thamani:</span>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: var(--green-dark);" id="totalVal">0 TSh</div>
+                </div>
+
+                <button class="btn btn-primary" type="submit" style="width: 100%; border-radius: 8px; padding: 14px; font-size: 1rem; cursor: pointer;">
+                    Endelea ➡️
+                </button>
+            </form>
+
+            <!-- Step 2: Confirm Escrow Payment -->
+            <div id="escrowFormStep2" style="display: none;">
+                <div style="background: rgba(0,0,0,0.02); padding: 16px; border-radius: 12px; margin-bottom: 20px; font-size: 0.9rem;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: var(--muted);">Mnunuzi:</span>
+                        <strong id="confirmBuyer">John Mashaka</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: var(--muted);">Mkulima:</span>
+                        <strong id="confirmFarmer">Mama Maria</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: var(--muted);">Zao:</span>
+                        <strong id="confirmCrop">Mahindi</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="color: var(--muted);">Uzito:</span>
+                        <strong id="confirmQty">1,000 Kg</strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 8px; margin-top: 8px;">
+                        <span style="color: var(--muted); font-weight: 700;">Jumla ya Malipo:</span>
+                        <strong id="confirmTotal" style="color: var(--green-dark); font-size: 1.15rem;">1,000,000 TSh</strong>
+                    </div>
+                </div>
+
+                <!-- Simple Swahili explanation -->
+                <div style="display: flex; align-items: start; gap: 10px; background: #e6f4ea; border: 1px solid rgba(47, 125, 50, 0.3); border-radius: 10px; padding: 12px; margin-bottom: 24px;">
+                    <span style="font-size: 1.4rem;">🛡️</span>
+                    <p style="margin: 0; font-size: 0.85rem; color: var(--green-dark); font-weight: 600; line-height: 1.4;">
+                        <strong>Sera ya Malango Salama:</strong> Pesa itahifadhiwa salama kwenye mfumo wetu wa dhamana na mkulima atapata ujumbe wa uthibitisho. Pesa itatolewa kwa mkulima punde tu mtakapothibitisha mzigo kufika sokoni.
+                    </p>
+                </div>
+
+                <div style="display: flex; gap: 12px;">
+                    <button onclick="backToStep1()" class="btn btn-ghost" style="flex: 1; border-radius: 8px; padding: 12px; font-size: 0.95rem; cursor: pointer;">
+                        ⬅️ Rudi
+                    </button>
+                    <button onclick="confirmEscrowPayment()" class="btn btn-primary" style="flex: 2; border-radius: 8px; padding: 12px; font-size: 0.95rem; cursor: pointer;">
+                        Thibitisha Lipa
+                    </button>
+                </div>
+            </div>
+
+            <!-- Receipt & Copy SMS Simulation -->
+            <div id="escrowReceipt" style="display: none;">
+                <div style="text-align: center; margin-bottom: 16px;">
+                    <span style="font-size: 3rem;">✅</span>
+                    <h4 style="color: var(--green); margin: 6px 0 0 0; font-size: 1.2rem; font-weight: 700;">Malipo Yamekamilika!</h4>
+                    <small style="color: var(--muted); font-weight: 500;">Pesa ipo salama kwenye dhamana (Escrow)</small>
+                </div>
+
+                <div style="background: #0f1f16; color: #e1ebe3; padding: 16px; border-radius: 12px; font-family: monospace; font-size: 0.8rem; line-height: 1.4; margin-bottom: 20px;">
+                    <div style="text-align: center; border-bottom: 1px dashed rgba(255,255,255,0.15); padding-bottom: 8px; margin-bottom: 10px; font-weight: 700; color: #b7c6bc;">
+                        M-PESA ESCROW RECIEPT
+                    </div>
+                    <div>REF: <strong id="receiptRef" style="color: var(--gold);">MPE82910381</strong></div>
+                    <div>MNUNUZI: <span id="receiptBuyer">John Mashaka</span></div>
+                    <div>MKULIMA: <span id="receiptFarmer">Mama Maria</span></div>
+                    <div>KIASI: <span id="receiptAmt">1,000,000 TSh</span></div>
+                    <div>HALI: <span style="background: var(--green); color: white; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 0.7rem;">ESCROWED</span></div>
+                </div>
+
+                <!-- Copy SMS button -->
+                <div class="form-group" style="margin-bottom: 16px;">
+                    <label style="font-size: 0.8rem; color: var(--muted); text-transform: uppercase; font-weight: 700;">Nakili SMS ya Uthibitisho ya Wakulima:</label>
+                    <textarea id="copySmsText" readonly rows="4" style="background: rgba(0,0,0,0.03); font-size: 0.85rem; padding: 10px; width: 100%; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; resize: none;"></textarea>
+                    <button onclick="copySMS()" class="btn btn-outline" style="margin-top: 8px; width: 100%; border-radius: 8px; padding: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+                        📋 Nakili Ujumbe (Copy)
+                    </button>
+                </div>
+
+                <button onclick="resetWizard()" class="btn btn-ghost" style="width: 100%; border-radius: 8px; padding: 12px; font-size: 0.9rem; cursor: pointer;">
+                    Unda Muamala Mpya ➕
+                </button>
+            </div>
+        </div>
+
+        <!-- Right: Recent Transactions & Release Actions -->
+        <div style="background: var(--card-bg); padding: 24px; border-radius: 20px; box-shadow: var(--shadow); border: 2px solid rgba(47, 125, 50, 0.2);">
+            <h3 style="color: var(--dark); font-size: 1.3rem; margin-bottom: 12px; font-weight: 700;">📃 Miamala ya Hivi Karibuni</h3>
+            
+            <div id="transactions-list" style="display: grid; gap: 16px;">
+                {% if transactions %}
+                    {% for tx in transactions %}
+                        <div class="tx-card" id="tx-card-{{ tx.id }}" style="border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 16px; background: rgba(0,0,0,0.01);">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                <div>
+                                    <strong style="color: var(--dark); font-size: 0.95rem;">Zao: {{ tx.crop_type }} ({{ tx.quantity_kg | int }} Kg)</strong>
+                                    <div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">Ref: {{ tx.mpesa_reference }}</div>
+                                </div>
+                                
+                                <!-- Status badges -->
+                                <span class="status-badge-val" id="tx-status-{{ tx.id }}" style="padding: 4px 10px; border-radius: 30px; font-size: 0.75rem; font-weight: 700; border: 1px solid;
+                                    {% if tx.status == 'escrowed' %}
+                                        background: #fff3cd; color: #856404; border-color: #ffeeba;
+                                    {% elif tx.status == 'released' %}
+                                        background: #d4edda; color: #155724; border-color: #c3e6cb;
+                                    {% else %}
+                                        background: #e2e3e5; color: #383d41; border-color: #d6d8db;
+                                    {% endif %}">
+                                    {% if tx.status == 'escrowed' %}🔒 DHAMANA (Escrowed)
+                                    {% elif tx.status == 'released' %}🔓 IMETOLEWA (Released)
+                                    {% else %}{{ tx.status | upper }}{% endif %}
+                                </span>
+                            </div>
+
+                            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 10px;">
+                                Mkulima: <strong>{{ tx.farmer_name }}</strong> | Mnunuzi: <strong>{{ tx.buyer_name }}</strong>
+                            </div>
+
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                                <div style="font-size: 1.15rem; font-weight: 800; color: var(--green);">
+                                    TSh {{ "{:,.0f}".format(tx.amount_tzs) }}
+                                </div>
+                                
+                                {% if tx.status == 'escrowed' %}
+                                    <button onclick="confirmEscrowRelease({{ tx.id }})" id="release-btn-{{ tx.id }}" class="btn btn-outline" style="border-radius: 30px; padding: 6px 14px; font-size: 0.75rem; font-weight: 700; border-color: #2f7d32; color: #2f7d32; cursor: pointer;">
+                                        🔓 Achia Malipo
+                                    </button>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div style="text-align: center; padding: 20px; background: rgba(0,0,0,0.02); border-radius: 10px;">
+                        <p style="color: var(--muted); font-size: 0.9rem; margin: 0;">Hakuna miamala yoyote iliyosajiliwa.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let activeTotal = 0;
+
+    function calculateTotal() {
+        const qty = parseFloat(document.getElementById('quantity_kg').value) || 0;
+        const price = parseFloat(document.getElementById('price_per_kg').value) || 0;
+        activeTotal = qty * price;
+        document.getElementById('totalVal').textContent = activeTotal.toLocaleString() + " TSh";
+    }
+
+    function goToStep2(event) {
+        event.preventDefault();
+        
+        document.getElementById('confirmBuyer').textContent = document.getElementById('buyer_name').value;
+        document.getElementById('confirmFarmer').textContent = document.getElementById('farmer_name').value;
+        document.getElementById('confirmCrop').textContent = document.getElementById('crop_type').value;
+        document.getElementById('confirmQty').textContent = (parseFloat(document.getElementById('quantity_kg').value) || 0).toLocaleString() + " Kg";
+        document.getElementById('confirmTotal').textContent = activeTotal.toLocaleString() + " TSh";
+        
+        document.getElementById('escrowFormStep1').style.display = 'none';
+        document.getElementById('escrowFormStep2').style.display = 'block';
+        
+        document.getElementById('step1-header').style.color = 'var(--muted)';
+        document.getElementById('step1-header').style.borderBottom = 'none';
+        document.getElementById('step2-header').style.color = 'var(--green)';
+        document.getElementById('step2-header').style.borderBottom = '2px solid var(--green)';
+    }
+
+    function backToStep1() {
+        document.getElementById('escrowFormStep1').style.display = 'block';
+        document.getElementById('escrowFormStep2').style.display = 'none';
+        
+        document.getElementById('step1-header').style.color = 'var(--green)';
+        document.getElementById('step1-header').style.borderBottom = '2px solid var(--green)';
+        document.getElementById('step2-header').style.color = 'var(--muted)';
+        document.getElementById('step2-header').style.borderBottom = 'none';
+    }
+
+    function confirmEscrowPayment() {
+        const payload = {
+            buyer_name: document.getElementById('buyer_name').value,
+            buyer_phone: document.getElementById('buyer_phone').value,
+            farmer_name: document.getElementById('farmer_name').value,
+            farmer_phone: document.getElementById('farmer_phone').value,
+            crop_type: document.getElementById('crop_type').value,
+            quantity_kg: parseFloat(document.getElementById('quantity_kg').value),
+            amount_tzs: activeTotal
+        };
+
+        fetch('/api/payment/initiate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                // Load receipt values
+                document.getElementById('receiptRef').textContent = res.data.mpesa_reference;
+                document.getElementById('receiptBuyer').textContent = payload.buyer_name;
+                document.getElementById('receiptFarmer').textContent = payload.farmer_name;
+                document.getElementById('receiptAmt').textContent = payload.amount_tzs.toLocaleString() + " TSh";
+                document.getElementById('copySmsText').value = res.data.sms_text;
+                
+                // Switch wizard to receipt screen
+                document.getElementById('escrowFormStep2').style.display = 'none';
+                document.getElementById('escrowReceipt').style.display = 'block';
+                
+                // Show dynamic standard toast
+                if (window.showSmsToast) {
+                    window.showSmsToast(payload.buyer_phone, res.data.sms_text);
+                }
+
+                // Add to list dynamically at top
+                addNewTransactionToList({
+                    id: res.data.transaction_id,
+                    crop_type: payload.crop_type,
+                    quantity_kg: payload.quantity_kg,
+                    mpesa_reference: res.data.mpesa_reference,
+                    buyer_name: payload.buyer_name,
+                    farmer_name: payload.farmer_name,
+                    amount_tzs: payload.amount_tzs,
+                    status: 'escrowed'
+                });
+            } else {
+                alert("Hitilafu ya muamala: " + res.message);
+            }
+        })
+        .catch(err => {
+            alert("Imeshindikana kuanzisha muamala.");
+            console.error(err);
+        });
+    }
+
+    function resetWizard() {
+        document.getElementById('escrowFormStep1').reset();
+        document.getElementById('totalVal').textContent = "0 TSh";
+        
+        document.getElementById('escrowFormStep1').style.display = 'block';
+        document.getElementById('escrowReceipt').style.display = 'none';
+        
+        document.getElementById('step1-header').style.color = 'var(--green)';
+        document.getElementById('step1-header').style.borderBottom = '2px solid var(--green)';
+        document.getElementById('step2-header').style.color = 'var(--muted)';
+        document.getElementById('step2-header').style.borderBottom = 'none';
+    }
+
+    function copySMS() {
+        const txt = document.getElementById('copySmsText');
+        txt.select();
+        document.execCommand('copy');
+        alert("Ujumbe wa SMS umenakiliwa! Sasa unaweza kuutuma kwa mkulima.");
+    }
+
+    function confirmEscrowRelease(txId) {
+        if (!confirm("Je, una uhakika wa kuachia malipo haya kwenda kwa mkulima? Hakikisha mzigo umefika salama sokoni.")) {
+            return;
+        }
+
+        fetch('/api/payment/confirm', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ transaction_id: txId })
+        })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                alert("Malipo yameachiwa kikamilifu!");
+                
+                // Update list styling dynamically
+                const badge = document.getElementById(`tx-status-${txId}`);
+                if (badge) {
+                    badge.textContent = "🔓 IMETOLEWA (Released)";
+                    badge.style.background = "#d4edda";
+                    badge.style.color = "#155724";
+                    badge.style.borderColor = "#c3e6cb";
+                }
+                
+                const btn = document.getElementById(`release-btn-${txId}`);
+                if (btn) {
+                    btn.remove();
+                }
+
+                // Show toast with release verification SMS
+                if (window.showSmsToast) {
+                    window.showSmsToast("M-PESA", res.data.sms_text);
+                }
+            } else {
+                alert("Hitilafu ya kuachia malipo: " + res.message);
+            }
+        })
+        .catch(err => {
+            alert("Hitilafu imetokea wakati wa kuachia malipo.");
+            console.error(err);
+        });
+    }
+
+    function addNewTransactionToList(tx) {
+        const list = document.getElementById('transactions-list');
+        const card = document.createElement('div');
+        card.id = `tx-card-${tx.id}`;
+        card.className = 'tx-card';
+        card.style = "border: 1px solid rgba(0,0,0,0.08); border-radius: 12px; padding: 16px; background: rgba(242,193,78,0.03); border-color: rgba(47,125,50,0.3); margin-bottom: 12px;";
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                <div>
+                    <strong style="color: var(--dark); font-size: 0.95rem;">Zao: ${tx.crop_type} (${parseInt(tx.quantity_kg)} Kg)</strong>
+                    <div style="font-size: 0.75rem; color: var(--muted); margin-top: 2px;">Ref: ${tx.mpesa_reference}</div>
+                </div>
+                <span class="status-badge-val" id="tx-status-${tx.id}" style="padding: 4px 10px; border-radius: 30px; font-size: 0.75rem; font-weight: 700; border: 1px solid #ffeeba; background: #fff3cd; color: #856404;">
+                    🔒 DHAMANA (Escrowed)
+                </span>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--muted); margin-bottom: 10px;">
+                Mkulima: <strong>${tx.farmer_name}</strong> | Mnunuzi: <strong>${tx.buyer_name}</strong>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                <div style="font-size: 1.15rem; font-weight: 800; color: var(--green);">
+                    TSh ${tx.amount_tzs.toLocaleString()}
+                </div>
+                <button onclick="confirmEscrowRelease(${tx.id})" id="release-btn-${tx.id}" class="btn btn-outline" style="border-radius: 30px; padding: 6px 14px; font-size: 0.75rem; font-weight: 700; border-color: #2f7d32; color: #2f7d32; cursor: pointer;">
+                    🔓 Achia Malipo
+                </button>
+            </div>
+        `;
+        list.prepend(card);
+    }
+</script>
+{% endblock %}

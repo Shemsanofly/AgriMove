@@ -1,0 +1,200 @@
+{% extends "dashboard_base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 1000px; padding: 20px 0;">
+    <!-- Offline Banner -->
+    <div id="offline-alert" style="display: none; background: #fff3cd; border-left: 5px solid #ffc107; color: #856404; padding: 15px; border-radius: 8px; margin-bottom: 20px; font-weight: 600; font-size: 1rem; box-shadow: var(--shadow);">
+        ⚠️ <span id="offline-message">Uko nje ya mtandao. Unaonyesha bei zilizohifadhiwa mnamo...</span>
+    </div>
+
+    <!-- Main Header Action -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;">
+        <h2 style="color: var(--dark); font-size: 1.6rem; margin: 0; font-weight: 700;">📈 Bodi ya Bei za Mazao (Bei za Soko)</h2>
+        <button onclick="refreshPrices()" class="btn btn-primary" style="padding: 10px 20px; border-radius: 30px; font-size: 0.95rem; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+            🔄 Sasisha Bei
+        </button>
+    </div>
+
+    <!-- Search/Filter -->
+    <div style="margin-bottom: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+        <input type="text" id="cropSearch" placeholder="Tafuta zao... (mf. Mahindi)" oninput="filterBoard()" style="width: 100%; border: 2px solid var(--green); border-radius: 12px; padding: 14px; font-size: 1.1rem; font-weight: 600; background: var(--card-bg); color: var(--text);">
+        <select id="marketFilter" onchange="filterBoard()" style="width: 100%; border: 2px solid var(--green); border-radius: 12px; padding: 14px; font-size: 1.1rem; font-weight: 600; background: var(--card-bg); color: var(--text); cursor: pointer;">
+            <option value="">Masoko Yote</option>
+            <option value="Kariakoo">Kariakoo (Dar)</option>
+            <option value="Arusha">Arusha</option>
+            <option value="Mwanza">Mwanza</option>
+            <option value="Mbeya">Mbeya</option>
+            <option value="Dodoma">Dodoma</option>
+        </select>
+    </div>
+
+    <!-- Grid Container -->
+    <div id="prices-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;">
+        {% if prices %}
+            {% for item in prices %}
+                <div class="crop-price-card" data-crop="{{ item.crop_name_swahili | lower }}" data-market="{{ item.market_name }}" style="background: var(--card-bg); border: 2px solid rgba(47, 125, 50, 0.2); border-radius: 16px; padding: 22px; box-shadow: var(--shadow); transition: transform 0.3s ease; position: relative;">
+                    <!-- Market / Region Header -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px;">
+                        <span style="font-weight: 700; color: var(--green); text-transform: uppercase; font-size: 0.85rem; letter-spacing: 0.05em;">📍 Masoko: {{ item.market_name }}</span>
+                        <span style="font-size: 0.85rem; color: var(--muted); font-weight: 500;">{{ item.region }}</span>
+                    </div>
+
+                    <!-- Crop Icon + Title -->
+                    <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px;">
+                        <span style="font-size: 2.5rem; line-height: 1;">
+                            {% if 'mahindi' in (item.crop_name_swahili | lower) %}🌽
+                            {% elif 'mpunga' in (item.crop_name_swahili | lower) or 'mchele' in (item.crop_name_swahili | lower) %}🌾
+                            {% elif 'muhogo' in (item.crop_name_swahili | lower) %}🍠
+                            {% elif 'nyanya' in (item.crop_name_swahili | lower) %}🍅
+                            {% elif 'vitunguu' in (item.crop_name_swahili | lower) %}🧅
+                            {% elif 'kahawa' in (item.crop_name_swahili | lower) %}☕
+                            {% elif 'korosho' in (item.crop_name_swahili | lower) %}🥜
+                            {% else %}🌾{% endif %}
+                        </span>
+                        <div>
+                            <h3 style="margin: 0; color: var(--dark); font-size: 1.35rem; font-weight: 700;">{{ item.crop_name_swahili }}</h3>
+                            <small style="color: var(--muted); font-weight: 500;">({{ item.crop_name }})</small>
+                        </div>
+                    </div>
+
+                    <!-- Price Display -->
+                    <div style="margin-bottom: 16px;">
+                        <div style="font-size: 0.8rem; color: var(--muted); text-transform: uppercase; font-weight: 700; margin-bottom: 2px;">Bei ya kilo (TSh/kg)</div>
+                        <div style="font-size: 2rem; font-weight: 800; color: var(--dark); line-height: 1.1;">
+                            {{ "{:,.0f}".format(item.price_per_kg_tzs or item.price) }} TSh
+                        </div>
+                    </div>
+
+                    <!-- Trend + Updated Time -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.02); padding: 8px 12px; border-radius: 10px;">
+                        <div style="display: flex; align-items: center; gap: 6px;">
+                            {% if item.price_trend == 'up' or item.trend | lower == 'rising' %}
+                                <span style="color: #2e7d32; font-size: 1.25rem; font-weight: bold;">⬆️</span>
+                                <span style="color: #2e7d32; font-weight: 700; font-size: 0.85rem;">Inapanda</span>
+                            {% elif item.price_trend == 'down' or item.trend | lower == 'falling' %}
+                                <span style="color: #c62828; font-size: 1.25rem; font-weight: bold;">⬇️</span>
+                                <span style="color: #c62828; font-weight: 700; font-size: 0.85rem;">Inashuka</span>
+                            {% else %}
+                                <span style="color: #0288d1; font-size: 1.25rem; font-weight: bold;">➡️</span>
+                                <span style="color: #0288d1; font-weight: 700; font-size: 0.85rem;">Imetulia</span>
+                            {% endif %}
+                        </div>
+                        <span style="font-size: 0.75rem; color: var(--muted); font-weight: 500;">{{ item.last_updated or item.updated_at[:10] }}</span>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: var(--card-bg); border-radius: 12px;">
+                <p style="font-size: 1.2rem; color: var(--muted);">Samahani, hakuna bei za mazao zilizopatikana. Bofya "Sasisha" au weka data ya demo kwanza.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    /* High contrast enhancement for outdoor viewing */
+    .crop-price-card {
+        border-color: #2f7d32 !important;
+    }
+    body.dark-mode .crop-price-card {
+        border-color: #f2c14e !important;
+    }
+    .crop-price-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+    }
+</style>
+
+<script>
+    // Seeding dynamic data into client-side cache on render
+    const rawPrices = [];
+    {% if prices %}
+        {% for item in prices %}
+            rawPrices.push({
+                crop_name: "{{ item.crop_name }}",
+                crop_name_swahili: "{{ item.crop_name_swahili }}",
+                market_name: "{{ item.market_name }}",
+                region: "{{ item.region }}",
+                price_per_kg_tzs: {{ item.price_per_kg_tzs or item.price }},
+                price_trend: "{{ item.price_trend or 'stable' }}",
+                last_updated: "{{ item.last_updated or item.updated_at[:10] }}"
+            });
+        {% endfor %}
+    {% endif %}
+
+    // Save to localStorage
+    if (rawPrices.length > 0) {
+        localStorage.setItem('agrimove_tz_prices', JSON.stringify({
+            timestamp: new Date().toLocaleString('sw-TZ'),
+            prices: rawPrices
+        }));
+    }
+
+    // Check online status on load
+    window.addEventListener('load', () => {
+        checkConnectivity();
+    });
+
+    function checkConnectivity() {
+        const offlineAlert = document.getElementById('offline-alert');
+        const offlineMessage = document.getElementById('offline-message');
+        
+        if (!navigator.onLine) {
+            const cached = localStorage.getItem('agrimove_tz_prices');
+            if (cached) {
+                const parsed = JSON.parse(cached);
+                offlineMessage.textContent = `Uko nje ya mtandao (Offline). Unaonyesha bei zilizohifadhiwa mnamo: ${parsed.timestamp}`;
+            } else {
+                offlineMessage.textContent = "Uko nje ya mtandao na hakuna bei zilizohifadhiwa kwenye kumbukumbu.";
+            }
+            offlineAlert.style.display = 'block';
+        } else {
+            offlineAlert.style.display = 'none';
+        }
+    }
+
+    function filterBoard() {
+        const searchVal = document.getElementById('cropSearch').value.toLowerCase().strip ? document.getElementById('cropSearch').value.toLowerCase().strip() : document.getElementById('cropSearch').value.toLowerCase();
+        const marketVal = document.getElementById('marketFilter').value;
+        const cards = document.querySelectorAll('.crop-price-card');
+
+        cards.forEach(card => {
+            const crop = card.getAttribute('data-crop');
+            const market = card.getAttribute('data-market');
+            
+            const matchesSearch = crop.includes(searchVal);
+            const matchesMarket = marketVal === "" || market === marketVal;
+
+            if (matchesSearch && matchesMarket) {
+                card.style.display = 'block';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    function refreshPrices() {
+        if (!navigator.onLine) {
+            alert("Imeshindikana kusasisha bei. Hakuna mtandao kwa sasa. Unatazama bei zilizohifadhiwa.");
+            checkConnectivity();
+            return;
+        }
+
+        fetch('/api/prices')
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    alert("Bei za soko zimesasishwa kikamilifu kutoka kwenye seva!");
+                    // Reload to show fresh pre-rendered content
+                    window.location.reload();
+                } else {
+                    alert("Imeshindikana kusasisha bei: " + res.message);
+                }
+            })
+            .catch(err => {
+                alert("Hitilafu imetokea wakati wa kusasisha bei.");
+                console.error(err);
+            });
+    }
+</script>
+{% endblock %}

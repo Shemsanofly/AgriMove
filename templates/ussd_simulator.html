@@ -1,389 +1,334 @@
 {% extends "dashboard_base.html" %}
 
 {% block content %}
-<section class="simulator-layout">
-  <!-- Left Side: Simulator Info and Instructions -->
-  <div class="card info-card">
-    <h3>Simulating Africa's Talking USSD & SMS</h3>
-    <p>This sandbox simulates the exact request/response lifecycle of the Africa's Talking USSD API and SMS gateway in a real rural environment.</p>
-    
-    <div class="step-guide">
-      <h4>How to use:</h4>
-      <ul>
-        <li><strong>Step 1:</strong> Use the phone keypad on the right to dial <code>*123#</code>.</li>
-        <li><strong>Step 2:</strong> Press the green <strong>Call</strong> button to initiate the USSD session.</li>
-        <li><strong>Step 3:</strong> Navigate the menu by entering options in the prompt box and clicking <strong>Send</strong>.</li>
-        <li><strong>Step 4:</strong> Check the <strong>SMS Inbox</strong> tab on the phone to view notifications generated during actions.</li>
-      </ul>
-    </div>
-    
-    <div class="technical-notes">
-      <h5>API Format Compatibility</h5>
-      <p>The backend processes payloads matching the Africa's Talking POST payload structure:</p>
-      <pre><code>{
-  "sessionId": "AT_Session_...",
-  "serviceCode": "*123#",
-  "phoneNumber": "+254700000000",
-  "text": "1*2*1"
-}</code></pre>
-      <p>Responses return plain text starting with <code>CON</code> (continue menu) or <code>END</code> (terminate session).</p>
-      <p>For the Africa's Talking sandbox website, expose this app publicly and set the USSD callback URL to:</p>
-      <pre><code>{{ callback_url }}</code></pre>
-      <p>When running locally, tunnel Flask with a public HTTPS URL and use <code>https://your-tunnel/api/ussd</code>.</p>
-      <p><strong>SMS mode:</strong> {{ sms_status.message }}</p>
-    </div>
-  </div>
-
-  <!-- Right Side: Phone Mockup -->
-  <div class="phone-mockup">
-    <div class="phone-bezel">
-      <div class="phone-speaker"></div>
-      
-      <div class="phone-screen">
-        <!-- Status Bar -->
-        <div class="phone-status-bar">
-          <span class="time" id="phoneTime">12:00</span>
-          <span class="icons">📶 4G 🔋 98%</span>
-        </div>
+<div class="container" style="max-width: 1000px; padding: 20px 0;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 40px; align-items: start;">
         
-        <!-- Screen Content Container -->
-        <div class="phone-display">
-          
-          <!-- Screen Tabs -->
-          <div class="phone-tabs">
-            <button class="tab-btn active" onclick="switchPhoneTab('dialer')">Dialer</button>
-            <button class="tab-btn" onclick="switchPhoneTab('sms')">SMS Inbox <span class="badge" id="smsBadge" style="display:none;">0</span></button>
-          </div>
-          
-          <!-- Dialer View -->
-          <div id="dialerView" class="phone-tab-content active">
-            <div class="dialer-screen">
-              <input type="text" id="dialInput" class="dial-input" placeholder="Dial *123#" readonly />
-            </div>
-            
-            <div class="phone-keypad">
-              <button onclick="pressKey('1')">1<small>o_o</small></button>
-              <button onclick="pressKey('2')">2<small>ABC</small></button>
-              <button onclick="pressKey('3')">3<small>DEF</small></button>
-              <button onclick="pressKey('4')">4<small>GHI</small></button>
-              <button onclick="pressKey('5')">5<small>JKL</small></button>
-              <button onclick="pressKey('6')">6<small>MNO</small></button>
-              <button onclick="pressKey('7')">7<small>PQRS</small></button>
-              <button onclick="pressKey('8')">8<small>TUV</small></button>
-              <button onclick="pressKey('9')">9<small>WXYZ</small></button>
-              <button onclick="pressKey('*')">*</button>
-              <button onclick="pressKey('0')">0<small>+</small></button>
-              <button onclick="pressKey('#')">#</button>
-              <button class="btn-clear" onclick="clearDialer()">Clear</button>
-              <button class="btn-dial" onclick="startUssd()">Call</button>
-              <button class="btn-backspace" onclick="backspaceDialer()">⌫</button>
-            </div>
-          </div>
-          
-          <!-- USSD Prompt Overlay -->
-          <div id="ussdOverlay" class="ussd-overlay">
-            <div class="ussd-window">
-              <div class="ussd-content" id="ussdContent">Loading session...</div>
-              <div class="ussd-loading" id="ussdLoading">
-                <div class="spinner"></div>
-              </div>
-              <div class="ussd-input-area" id="ussdInputArea">
-                <input type="text" id="ussdResponseInput" placeholder="Enter option..." onkeydown="if(event.key === 'Enter') submitUssdResponse()" />
-                <div class="ussd-actions">
-                  <button class="btn-ussd-cancel" onclick="closeUssd()">Cancel</button>
-                  <button class="btn-ussd-send" onclick="submitUssdResponse()">Send</button>
+        <!-- Left: Phone Simulator Widget -->
+        <div style="display: flex; justify-content: center;">
+            <div class="nokia-phone-container" style="width: 320px; background: #2f3640; border-radius: 40px; padding: 20px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); border: 8px solid #1e272e;">
+                <!-- Phone Ear Speaker -->
+                <div style="width: 60px; height: 8px; background: #718093; border-radius: 99px; margin: 0 auto 18px;"></div>
+                
+                <!-- Phone Screen -->
+                <div class="nokia-screen" style="background: #9bd09b; border: 10px solid #2f3542; border-radius: 12px; height: 260px; padding: 18px; font-family: 'Courier New', Courier, monospace; color: #1c2e1c; display: flex; flex-direction: column; justify-content: space-between; box-shadow: inset 0 0 10px rgba(0,0,0,0.5);">
+                    <!-- Header -->
+                    <div style="font-size: 0.75rem; border-bottom: 1.5px solid #1c2e1c; padding-bottom: 4px; font-weight: 700; display: flex; justify-content: space-between;">
+                        <span>📶 Vodacom TZ</span>
+                        <span>12:00</span>
+                    </div>
+
+                    <!-- Screen Content -->
+                    <div id="ussd-screen-content" style="font-size: 0.85rem; font-weight: 700; line-height: 1.45; overflow-y: auto; flex: 1; margin: 10px 0; white-space: pre-wrap;">
+                        <!-- JS Rendered Dynamic Screens -->
+                    </div>
+
+                    <!-- Input Dialog box inside screen -->
+                    <div style="display: flex; border-top: 1.5px solid #1c2e1c; padding-top: 6px; gap: 6px; align-items: center;">
+                        <span style="font-size: 0.85rem; font-weight: 700;">Jibu:</span>
+                        <input type="text" id="ussd-input" onkeydown="handleUssdKey(event)" style="flex: 1; background: transparent; border: none; font-family: inherit; font-size: 0.9rem; font-weight: 700; color: inherit; outline: none; border-bottom: 1px solid #1c2e1c;">
+                    </div>
                 </div>
-              </div>
-            </div>
-          </div>
 
-          <!-- SMS Inbox View -->
-          <div id="smsView" class="phone-tab-content">
-            <div class="sms-list" id="smsList">
-              <div class="sms-empty">No text messages yet.</div>
+                <!-- Control Buttons -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; padding: 0 10px;">
+                    <button onclick="ussdSend()" style="background: #2e7d32; border: none; padding: 10px; border-radius: 10px; color: white; font-weight: 700; cursor: pointer; box-shadow: 0 4px #1b5e20;">TUMA</button>
+                    <button onclick="ussdCancel()" style="background: #c62828; border: none; padding: 10px; border-radius: 10px; color: white; font-weight: 700; cursor: pointer; box-shadow: 0 4px #7f0000;">FUTA</button>
+                </div>
+
+                <!-- Keypad -->
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 25px; padding: 0 10px;">
+                    {% for i in range(1, 10) %}
+                        <button onclick="pressKey('{{ i }}')" class="keypad-btn" style="background: #7f8c8d; border: none; color: white; font-weight: 700; font-size: 1.1rem; padding: 12px; border-radius: 12px; cursor: pointer; box-shadow: 0 3px #5d6768;">{{ i }}</button>
+                    {% endfor %}
+                    <button onclick="pressKey('*')" class="keypad-btn" style="background: #7f8c8d; border: none; color: white; font-weight: 700; font-size: 1.1rem; padding: 12px; border-radius: 12px; cursor: pointer; box-shadow: 0 3px #5d6768;">*</button>
+                    <button onclick="pressKey('0')" class="keypad-btn" style="background: #7f8c8d; border: none; color: white; font-weight: 700; font-size: 1.1rem; padding: 12px; border-radius: 12px; cursor: pointer; box-shadow: 0 3px #5d6768;">0</button>
+                    <button onclick="pressKey('#')" class="keypad-btn" style="background: #7f8c8d; border: none; color: white; font-weight: 700; font-size: 1.1rem; padding: 12px; border-radius: 12px; cursor: pointer; box-shadow: 0 3px #5d6768;">#</button>
+                </div>
             </div>
-          </div>
-          
         </div>
-      </div>
-      
-      <div class="phone-home-btn"></div>
-    </div>
-  </div>
-</section>
 
-<!-- Active requests for testing status tracking -->
-<section class="card table-card" style="margin-top: 30px;">
-  <div class="table-header">
-    <h3>Farmer Shipments Reference List</h3>
-    <span>Use these Request IDs in option 4 to track active orders.</span>
-  </div>
-  <div class="table-responsive">
-    <table class="data-table">
-      <thead>
-        <tr>
-          <th>Request ID</th>
-          <th>Farmer</th>
-          <th>Goods Type</th>
-          <th>Route</th>
-          <th>Current Status</th>
-          <th>Simulation</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for r in requests %}
-        <tr>
-          <td><strong>#{{ r.id }}</strong></td>
-          <td>{{ r.farmer_name }}</td>
-          <td>{{ r.goods_type }}</td>
-          <td>{{ r.pickup_location }} to {{ r.destination }}</td>
-          <td>
-            <span class="status-badge status-{{ r.status|lower|replace(' ', '-') }}">
-              {{ r.status }}
-            </span>
-          </td>
-          <td>
-            <button class="btn btn-micro btn-outline" type="button" onclick="simulateJourneyStep(this, {{ r.id }})">Move GPS</button>
-            <button class="btn btn-micro btn-primary" type="button" onclick="simulateFullJourney(this, {{ r.id }})">Full Journey</button>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</section>
+        <!-- Right: Simulator Guide & Explanations -->
+        <div style="background: var(--card-bg); padding: 26px; border-radius: 20px; box-shadow: var(--shadow); border: 2px solid rgba(47, 125, 50, 0.2);">
+            <h3 style="color: var(--green); font-size: 1.4rem; margin-bottom: 12px; font-weight: 700;">📱 USSD Tanzania (*384#) Guide</h3>
+            <p style="color: var(--muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 20px; font-weight: 500;">
+                Kwenye mitandao ya 2G vijijini Tanzania, USSD ndiyo njia pekee ya wakulima kupata data bila intaneti. Simulator hii inatumia data halisi kutoka kwenye kanzidata yako ya SQLite.
+            </p>
+
+            <div style="background: rgba(0,0,0,0.02); padding: 16px; border-radius: 12px; margin-bottom: 24px; border-left: 4px solid var(--gold);">
+                <h4 style="margin: 0 0 6px 0; font-size: 1rem; font-weight: 700; color: var(--dark);">Jinsi ya Kujaribu (Steps):</h4>
+                <ol style="margin: 0; padding-left: 18px; font-size: 0.9rem; color: var(--muted); line-height: 1.6; font-weight: 500;">
+                    <li>Bonyeza namba kwenye kibodi au skrini na ubofye <strong>TUMA</strong>.</li>
+                    <li>Weka nambari ya huduma: <code>*384#</code> kuanza bodi ya AgriMove.</li>
+                    <li>Chagua <strong>1</strong> kuona Bei za Mazao sokoni.</li>
+                    <li>Chagua <strong>2</strong> kuona Safari za Kikundi (Usafirishaji).</li>
+                    <li>Chagua <strong>3</strong> kutafuta Maghala ya kuhifadhi mazao (WRS).</li>
+                    <li>Chagua <strong>4</strong> kuangalia hali ya Escrow ya M-Pesa.</li>
+                </ol>
+            </div>
+
+            <div style="font-size: 0.85rem; color: var(--muted); line-height: 1.4; border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 16px;">
+                💡 <strong>Kidokezo:</strong> Unaweza kupakia upya data ya demo kwanza kwa kupitia route ya <a href="/setup-demo" target="_blank" style="color: var(--green); font-weight: 700; text-decoration: underline;">/setup-demo</a> ili simulator iwe na data kamili za miamala, masoko, na gari za usafiri.
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<style>
+    .keypad-btn:active {
+        transform: translateY(2px);
+        box-shadow: 0 1px #5d6768 !important;
+    }
+</style>
 
 <script>
-  let currentUssdSessionId = "";
-  let ussdTextAccumulator = "";
-  let smsCount = 0;
-  
-  // Set real time in simulator clock
-  function updateClock() {
-    const now = new Date();
-    let hours = now.getHours();
-    let minutes = now.getMinutes();
-    hours = hours < 10 ? '0' + hours : hours;
-    minutes = minutes < 10 ? '0' + minutes : minutes;
-    document.getElementById("phoneTime").textContent = hours + ":" + minutes;
-  }
-  setInterval(updateClock, 1000);
-  updateClock();
+    // Load pre-seeded data from route context
+    const dbPrices = {{ prices | tojson | safe }};
+    const dbPools = {{ pools | tojson | safe }};
+    const dbStorage = {{ storage | tojson | safe }};
+    const dbTransactions = {{ transactions | tojson | safe }};
 
-  function switchPhoneTab(tab) {
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.phone-tab-content').forEach(view => view.classList.remove('active'));
+    let sessionActive = false;
+    let ussdHistory = [];
+    let currentMenu = 'dial'; // dial, main, prices_crops, prices_markets, pools, pools_detail, storage, storage_detail, payments, payments_detail
     
-    if (tab === 'dialer') {
-      document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
-      document.getElementById('dialerView').classList.add('active');
-    } else {
-      document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
-      document.getElementById('smsView').classList.add('active');
-      // Reset SMS badge
-      smsCount = 0;
-      const badge = document.getElementById("smsBadge");
-      badge.style.display = "none";
-      badge.textContent = "0";
+    // Selection state variables
+    let selectedCrop = '';
+    let selectedPoolId = null;
+    let selectedStorageId = null;
+    let selectedTxId = null;
+
+    // Render Dial Screen Initially
+    renderUssdScreen();
+
+    function pressKey(key) {
+        document.getElementById('ussd-input').value += key;
     }
-  }
 
-  function pressKey(key) {
-    const input = document.getElementById("dialInput");
-    if (input.value.length < 15) {
-      input.value += key;
+    function handleUssdKey(event) {
+        if (event.key === 'Enter') {
+            ussdSend();
+        }
     }
-  }
 
-  function clearDialer() {
-    document.getElementById("dialInput").value = "";
-  }
-
-  function backspaceDialer() {
-    const input = document.getElementById("dialInput");
-    input.value = input.value.slice(0, -1);
-  }
-
-  async function startUssd() {
-    const dialInput = document.getElementById("dialInput").value.trim();
-    if (dialInput !== "*123#") {
-      alert("Invalid Service Code! Dial *123# for AgriMove AI.");
-      return;
+    function ussdCancel() {
+        document.getElementById('ussd-input').value = '';
+        if (sessionActive) {
+            ussdHistory = [];
+            sessionActive = false;
+            currentMenu = 'dial';
+            renderUssdScreen();
+        }
     }
-    
-    // Open USSD popup
-    const overlay = document.getElementById("ussdOverlay");
-    overlay.classList.add("active");
-    
-    const content = document.getElementById("ussdContent");
-    const loader = document.getElementById("ussdLoading");
-    const inputArea = document.getElementById("ussdInputArea");
-    
-    content.style.display = "none";
-    inputArea.style.display = "none";
-    loader.style.display = "block";
-    
-    // Reset session variables
-    currentUssdSessionId = "session_" + Math.random().toString(36).substr(2, 9);
-    ussdTextAccumulator = "";
-    document.getElementById("ussdResponseInput").value = "";
-    
-    // Make call to api
-    await callUssdApi("");
-  }
 
-  async function callUssdApi(textValue) {
-    const content = document.getElementById("ussdContent");
-    const loader = document.getElementById("ussdLoading");
-    const inputArea = document.getElementById("ussdInputArea");
-    
-    try {
-      const formData = new FormData();
-      formData.append("sessionId", currentUssdSessionId);
-      formData.append("serviceCode", "*123#");
-      formData.append("phoneNumber", "+254712490330"); // Amina's simulated phone
-      formData.append("text", textValue);
-      
-      const response = await fetch("/api/ussd", {
-        method: "POST",
-        body: formData
-      });
-      
-      const data = await response.text();
-      loader.style.display = "none";
-      content.style.display = "block";
-      
-      if (data.startsWith("CON")) {
-        const menuText = data.substring(4).replace(/\n/g, "<br>");
-        content.innerHTML = menuText;
-        inputArea.style.display = "flex";
-        document.getElementById("ussdResponseInput").focus();
-      } else if (data.startsWith("END")) {
-        const endText = data.substring(4).replace(/\n/g, "<br>");
-        content.innerHTML = endText;
-        inputArea.style.display = "none";
+    function ussdSend() {
+        const inputVal = document.getElementById('ussd-input').value.strip ? document.getElementById('ussd-input').value.strip() : document.getElementById('ussd-input').value.trim();
+        document.getElementById('ussd-input').value = '';
+
+        if (!sessionActive) {
+            if (inputVal === '*384#') {
+                sessionActive = true;
+                currentMenu = 'main';
+                ussdHistory.push('main');
+            } else {
+                alert("Namba isiyosahihi! Weka *384# kuanzisha simulator.");
+            }
+            renderUssdScreen();
+            return;
+        }
+
+        // Handle navigation inputs
+        if (inputVal === '0') {
+            // Back navigation
+            if (ussdHistory.length > 1) {
+                ussdHistory.pop(); // Remove current
+                currentMenu = ussdHistory[ussdHistory.length - 1];
+            } else {
+                ussdCancel();
+            }
+            renderUssdScreen();
+            return;
+        }
+
+        // State machine menu routing
+        switch (currentMenu) {
+            case 'main':
+                if (inputVal === '1') {
+                    currentMenu = 'prices_crops';
+                    ussdHistory.push('prices_crops');
+                } else if (inputVal === '2') {
+                    currentMenu = 'pools';
+                    ussdHistory.push('pools');
+                } else if (inputVal === '3') {
+                    currentMenu = 'storage';
+                    ussdHistory.push('storage');
+                } else if (inputVal === '4') {
+                    currentMenu = 'payments';
+                    ussdHistory.push('payments');
+                } else {
+                    alert("Chaguo lisilo sahihi!");
+                }
+                break;
+
+            case 'prices_crops':
+                const cropsList = getUniqueCrops();
+                const cropIdx = parseInt(inputVal) - 1;
+                if (cropIdx >= 0 && cropIdx < cropsList.length) {
+                    selectedCrop = cropsList[cropIdx];
+                    currentMenu = 'prices_markets';
+                    ussdHistory.push('prices_markets');
+                } else {
+                    alert("Chagua zao sahihi!");
+                }
+                break;
+
+            case 'prices_markets':
+                // It shows prices for markets, simple back choice
+                break;
+
+            case 'pools':
+                const poolIdx = parseInt(inputVal) - 1;
+                if (poolIdx >= 0 && poolIdx < dbPools.length) {
+                    selectedPoolId = dbPools[poolIdx].id;
+                    currentMenu = 'pools_detail';
+                    ussdHistory.push('pools_detail');
+                } else {
+                    alert("Chaguo lisilolingiwa!");
+                }
+                break;
+
+            case 'storage':
+                const storageIdx = parseInt(inputVal) - 1;
+                if (storageIdx >= 0 && storageIdx < dbStorage.length) {
+                    selectedStorageId = dbStorage[storageIdx].id;
+                    currentMenu = 'storage_detail';
+                    ussdHistory.push('storage_detail');
+                } else {
+                    alert("Chaguo lisilolingiwa!");
+                }
+                break;
+
+            case 'payments':
+                const txIdx = parseInt(inputVal) - 1;
+                if (txIdx >= 0 && txIdx < dbTransactions.length) {
+                    selectedTxId = dbTransactions[txIdx].id;
+                    currentMenu = 'payments_detail';
+                    ussdHistory.push('payments_detail');
+                } else {
+                    alert("Chaguo lisilolingiwa!");
+                }
+                break;
+        }
+
+        renderUssdScreen();
+    }
+
+    function getUniqueCrops() {
+        const crops = [];
+        dbPrices.forEach(p => {
+            if (!crops.includes(p.crop_name_swahili)) {
+                crops.push(p.crop_name_swahili);
+            }
+        });
+        return crops;
+    }
+
+    function renderUssdScreen() {
+        const content = document.getElementById('ussd-screen-content');
         
-        // Push an SMS simulating that the flow ended and notifications are sent
-        setTimeout(() => {
-          addSimulatedSms("AgriMove AI", endText.replace(/<br>/g, "\n"));
-        }, 1500);
-        
-        // Auto close after 5 seconds
-        setTimeout(() => {
-          if (document.getElementById("ussdOverlay").classList.contains("active") && inputArea.style.display === "none") {
-            closeUssd();
-          }
-        }, 6000);
-      } else {
-        content.innerHTML = "Error parsing network response. Please try again.";
-        inputArea.style.display = "none";
-      }
-      
-    } catch (e) {
-      loader.style.display = "none";
-      content.style.display = "block";
-      content.innerHTML = "Network connection failed. Sandbox offline.";
+        if (!sessionActive) {
+            content.innerHTML = `Ingiza Msimbo wa USSD\nkupata huduma:\n\n*384#`;
+            return;
+        }
+
+        switch (currentMenu) {
+            case 'main':
+                content.innerHTML = `AgriMove Tanzania\n*384#\n--------------\n1. Bei za Soko\n2. Tafuta Usafiri\n3. Hifadhi\n4. Malipo Salama\n\nFuta = Cancel`;
+                break;
+
+            case 'prices_crops':
+                const crops = getUniqueCrops();
+                let cropText = "AgriMove: Chagua Zao:\n";
+                crops.forEach((c, idx) => {
+                    cropText += `${idx+1}. ${c}\n`;
+                });
+                cropText += "0. Nyuma";
+                content.innerHTML = cropText;
+                break;
+
+            case 'prices_markets':
+                let marketText = `Bei za ${selectedCrop}:\n`;
+                const filteredPrices = dbPrices.filter(p => p.crop_name_swahili === selectedCrop);
+                filteredPrices.forEach((p, idx) => {
+                    marketText += `• ${p.market_name}: ${p.price_per_kg_tzs.toLocaleString()} TSh/kg (${p.price_trend === 'up' ? '⬆️' : (p.price_trend === 'down' ? '⬇️' : '➡️')})\n`;
+                });
+                marketText += "\n0. Nyuma";
+                content.innerHTML = marketText;
+                break;
+
+            case 'pools':
+                let poolText = "Tafuta Usafiri (Pools):\n";
+                if (dbPools.length === 0) {
+                    poolText += "Hakuna safari wazi.\n";
+                } else {
+                    dbPools.forEach((p, idx) => {
+                        poolText += `${idx+1}. Njia: ${p.route_from.split(' ')[0]}->${p.route_to.split(' ')[0]} (${p.available_slots} slots)\n`;
+                    });
+                }
+                poolText += "\n0. Nyuma";
+                content.innerHTML = poolText;
+                break;
+
+            case 'pools_detail':
+                const pool = dbPools.find(p => p.id === selectedPoolId);
+                if (pool) {
+                    content.innerHTML = `Njia: ${pool.route_from} kwenda ${pool.route_to}\nKujaza: Mifuko ${pool.available_slots}/${pool.truck_capacity_bags}\nDereva: ${pool.driver_name}\nSimu: ${pool.driver_phone}\nGharama: ${pool.cost_per_bag_tzs.toLocaleString()} TSh/mfuko\n\n0. Nyuma`;
+                } else {
+                    content.innerHTML = "Safari haikupatikana.\n0. Nyuma";
+                }
+                break;
+
+            case 'storage':
+                let storageText = "Hifadhi Yangu (Maghala):\n";
+                dbStorage.forEach((s, idx) => {
+                    storageText += `${idx+1}. ${s.name} (${s.region})\n`;
+                });
+                storageText += "\n0. Nyuma";
+                content.innerHTML = storageText;
+                break;
+
+            case 'storage_detail':
+                const store = dbStorage.find(s => s.id === selectedStorageId);
+                if (store) {
+                    content.innerHTML = `Ghala: ${store.name}\nMkoa: ${store.region}\nWilaya: ${store.district}\nAina: ${store.facility_type}\nUwezo: ${store.capacity_tons} tani\nWRS: ${store.accepts_wrs === 1 ? 'Ndio' : 'Hapana'}\nSimu: ${store.contact_phone}\n\n0. Nyuma`;
+                } else {
+                    content.innerHTML = "Ghala halikupatikana.\n0. Nyuma";
+                }
+                break;
+
+            case 'payments':
+                let txText = "Escrow ya M-Pesa (Miamala):\n";
+                if (dbTransactions.length === 0) {
+                    txText += "Hakuna miamala.\n";
+                } else {
+                    dbTransactions.forEach((tx, idx) => {
+                        txText += `${idx+1}. Ref: ${tx.mpesa_reference} (${tx.amount_tzs.toLocaleString()} TSh)\n`;
+                    });
+                }
+                txText += "\n0. Nyuma";
+                content.innerHTML = txText;
+                break;
+
+            case 'payments_detail':
+                const tx = dbTransactions.find(t => t.id === selectedTxId);
+                if (tx) {
+                    content.innerHTML = `Ref: ${tx.mpesa_reference}\nKiasi: ${tx.amount_tzs.toLocaleString()} TSh\nZao: ${tx.crop_type} (${tx.quantity_kg} kg)\nMkulima: ${tx.farmer_name}\nMnunuzi: ${tx.buyer_name}\nHali: ${tx.status === 'escrowed' ? 'Dhamana (Escrowed)' : 'Imelipwa (Released)'}\n\n0. Nyuma`;
+                } else {
+                    content.innerHTML = "Muamala haukupatikana.\n0. Nyuma";
+                }
+                break;
+        }
     }
-  }
-
-  function submitUssdResponse() {
-    const inputField = document.getElementById("ussdResponseInput");
-    const inputVal = inputField.value.trim();
-    if (inputVal === "") return;
-    
-    const content = document.getElementById("ussdContent");
-    const loader = document.getElementById("ussdLoading");
-    const inputArea = document.getElementById("ussdInputArea");
-    
-    content.style.display = "none";
-    inputArea.style.display = "none";
-    loader.style.display = "block";
-    
-    // Accumulate inputs separated by asterisk
-    if (ussdTextAccumulator === "") {
-      ussdTextAccumulator = inputVal;
-    } else {
-      ussdTextAccumulator += "*" + inputVal;
-    }
-    
-    inputField.value = "";
-    callUssdApi(ussdTextAccumulator);
-  }
-
-  function closeUssd() {
-    document.getElementById("ussdOverlay").classList.remove("active");
-    clearDialer();
-  }
-  
-  function addSimulatedSms(sender, message) {
-    const list = document.getElementById("smsList");
-    const empty = list.querySelector(".sms-empty");
-    if (empty) empty.remove();
-    
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    
-    const sms = document.createElement("div");
-    sms.className = "sms-bubble animate-in";
-    sms.innerHTML = `
-      <div class="sms-sender">${sender}</div>
-      <div class="sms-body">${message.replace(/\n/g, '<br>')}</div>
-      <div class="sms-time">${timeStr}</div>
-    `;
-    
-    list.insertBefore(sms, list.firstChild);
-    
-    // Increment badge count if dialer tab is open
-    if (!document.getElementById("smsView").classList.contains("active")) {
-      smsCount++;
-      const badge = document.getElementById("smsBadge");
-      badge.textContent = smsCount;
-      badge.style.display = "inline-block";
-    }
-    
-    // Trigger web-level SMS notification card in workspace
-    if (window.showSmsToast) {
-      window.showSmsToast(sender, message);
-    }
-  }
-
-  async function runJourneySimulation(btn, reqId, mode) {
-    const originalText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = mode === "full" ? "Running..." : "Moving...";
-
-    try {
-      const response = await fetch(`/simulate/gps/${reqId}${mode === "full" ? "/full" : ""}`, {
-        method: "POST"
-      });
-      const data = await response.json();
-      if (!data.success) throw new Error("Simulation failed");
-
-      addSimulatedSms(
-        "AgriMove GPS",
-        `Shipment #${reqId}: ${data.status}. GPS ${data.progress}% complete (${data.latitude}, ${data.longitude}).`
-      );
-
-      if (data.status === "Delivered") {
-        const row = btn.closest("tr");
-        const badge = row.querySelector(".status-badge");
-        badge.textContent = "Delivered";
-        badge.className = "status-badge status-delivered";
-      }
-    } catch (e) {
-      alert("GPS simulation failed. Please check the Flask server logs.");
-    } finally {
-      btn.disabled = false;
-      btn.textContent = originalText;
-    }
-  }
-
-  function simulateJourneyStep(btn, reqId) {
-    runJourneySimulation(btn, reqId, "step");
-  }
-
-  function simulateFullJourney(btn, reqId) {
-    runJourneySimulation(btn, reqId, "full");
-  }
 </script>
 {% endblock %}

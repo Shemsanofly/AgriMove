@@ -6,6 +6,10 @@ import json
 
 from flask import Flask, abort, flash, jsonify, redirect, render_template, request, url_for
 
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
 app = Flask(__name__)
 app.secret_key = "agrimove-ai-secret"
 
@@ -189,12 +193,17 @@ def init_db():
         CREATE TABLE IF NOT EXISTS market_prices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             crop_name TEXT NOT NULL,
+            crop_name_swahili TEXT,
             region TEXT NOT NULL,
+            market_name TEXT,
             price REAL NOT NULL,
+            price_per_kg_tzs REAL DEFAULT 0.0,
             demand_level TEXT DEFAULT 'Medium',
             trend TEXT DEFAULT 'Stable',
+            price_trend TEXT DEFAULT 'stable',
             updated_at TEXT NOT NULL,
-            UNIQUE(crop_name, region)
+            last_updated TEXT,
+            UNIQUE(crop_name, region, market_name)
         )
         """
     )
@@ -269,6 +278,75 @@ def init_db():
             created_at TEXT NOT NULL,
             FOREIGN KEY (farmer_id) REFERENCES farmers (id),
             FOREIGN KEY (offer_id) REFERENCES buyer_offers (id)
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS transport_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            farmer_name TEXT NOT NULL,
+            farmer_phone TEXT NOT NULL,
+            village TEXT NOT NULL,
+            ward TEXT NOT NULL,
+            district TEXT NOT NULL,
+            crop_type TEXT NOT NULL,
+            quantity_bags INTEGER NOT NULL,
+            pickup_date TEXT NOT NULL,
+            status TEXT DEFAULT 'open',
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS transport_pools (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            truck_capacity_bags INTEGER NOT NULL,
+            driver_name TEXT NOT NULL,
+            driver_phone TEXT NOT NULL,
+            route_from TEXT NOT NULL,
+            route_to TEXT NOT NULL,
+            departure_date TEXT NOT NULL,
+            cost_per_bag_tzs REAL NOT NULL,
+            available_slots INTEGER NOT NULL,
+            status TEXT DEFAULT 'open'
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            buyer_name TEXT NOT NULL,
+            buyer_phone TEXT NOT NULL,
+            farmer_name TEXT NOT NULL,
+            farmer_phone TEXT NOT NULL,
+            crop_type TEXT NOT NULL,
+            quantity_kg REAL NOT NULL,
+            amount_tzs REAL NOT NULL,
+            mpesa_reference TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS storage_facilities (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            facility_type TEXT NOT NULL,
+            region TEXT NOT NULL,
+            district TEXT NOT NULL,
+            village TEXT NOT NULL,
+            gps_lat REAL NOT NULL,
+            gps_lng REAL NOT NULL,
+            capacity_tons REAL NOT NULL,
+            available_tons REAL NOT NULL,
+            contact_phone TEXT NOT NULL,
+            cost_per_bag_per_month_tzs REAL NOT NULL,
+            accepts_wrs INTEGER DEFAULT 0
         )
         """
     )
@@ -492,7 +570,28 @@ def summarize_statuses(requests_rows):
 
 @app.route("/")
 def home():
-    return render_template("index.html")
+    try:
+        conn = get_db_connection()
+        farmers_count = conn.execute("SELECT COUNT(*) FROM farmers").fetchone()[0]
+        
+        maize_row = conn.execute(
+            "SELECT price_per_kg_tzs FROM market_prices WHERE LOWER(crop_name) = 'maize' OR LOWER(crop_name_swahili) = 'mahindi' ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        maize_price = maize_row[0] if (maize_row and maize_row[0]) else 950.0
+        
+        loads_count = conn.execute("SELECT COUNT(*) FROM transport_requests").fetchone()[0]
+        conn.close()
+    except Exception as e:
+        farmers_count = 0
+        maize_price = 950.0
+        loads_count = 0
+        
+    return render_template(
+        "index.html",
+        farmers_count=farmers_count,
+        maize_price=maize_price,
+        loads_count=loads_count
+    )
 
 
 @app.route("/farmer", methods=["GET", "POST"])
@@ -719,6 +818,474 @@ init_db()
 seed_drivers()
 seed_market_prices()
 seed_buyers()
+
+
+# ============== FEATURE 1: BEI ZA SOKO (Market Price Board) ==============
+
+@app.get("/api/prices")
+def api_prices():
+    try:
+        conn = get_db_connection()
+        prices = conn.execute("SELECT * FROM market_prices ORDER BY crop_name, region, market_name").fetchall()
+        conn.close()
+        data = [dict(row) for row in prices]
+        return jsonify({"success": True, "data": data, "message": "Bei za soko zimepatikana."})
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
+
+
+@app.get("/api/prices/<crop>")
+def api_crop_price(crop):
+    try:
+        conn = get_db_connection()
+        prices = conn.execute(
+            "SELECT * FROM market_prices WHERE LOWER(crop_name) = ? OR LOWER(crop_name_swahili) = ? ORDER BY region, market_name",
+            (crop.lower(), crop.lower())
+        ).fetchall()
+        conn.close()
+        data = [dict(row) for row in prices]
+        if not data:
+            return jsonify({"success": False, "data": None, "message": f"Bei ya zao '{crop}' haikupatikana."}), 404
+        return jsonify({"success": True, "data": data, "message": f"Bei za '{crop}' zimepatikana."})
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
+
+
+@app.get("/market-prices")
+def market_prices_board():
+    try:
+        conn = get_db_connection()
+        prices = conn.execute("SELECT * FROM market_prices ORDER BY crop_name, region, market_name").fetchall()
+        conn.close()
+        return render_template(
+            "bei_za_soko.html",
+            prices=prices,
+            active="market_prices",
+            heading="Bei za Soko",
+            subheading="Bodi ya bei za mazao katika masoko makuu ya Tanzania."
+        )
+    except Exception as e:
+        return render_template(
+            "bei_za_soko.html",
+            prices=[],
+            error=str(e),
+            active="market_prices",
+            heading="Bei za Soko",
+            subheading="Bodi ya bei za mazao."
+        )
+
+
+# ============== FEATURE 2: SHAMBA CONNECT (Load Pooling) ==============
+
+def find_matching_requests(conn, ward, district, crop_type, pickup_date_str, current_req_id=None):
+    query = """
+        SELECT * FROM transport_requests 
+        WHERE status = 'open' AND LOWER(crop_type) = ?
+    """
+    params = [crop_type.lower()]
+    if current_req_id:
+        query += " AND id != ?"
+        params.append(current_req_id)
+    
+    rows = conn.execute(query, params).fetchall()
+    matches = []
+    
+    try:
+        target_date = datetime.strptime(pickup_date_str[:10], "%Y-%m-%d")
+    except ValueError:
+        target_date = None
+        
+    for row in rows:
+        same_location = (row["ward"].lower() == ward.lower()) or (row["district"].lower() == district.lower())
+        if not same_location:
+            continue
+            
+        if target_date:
+            try:
+                row_date = datetime.strptime(row["pickup_date"][:10], "%Y-%m-%d")
+                diff_days = abs((row_date - target_date).days)
+                if diff_days <= 3:
+                    matches.append(dict(row))
+            except ValueError:
+                matches.append(dict(row))
+        else:
+            matches.append(dict(row))
+    return matches
+
+
+@app.post("/api/transport/request")
+def api_transport_request():
+    try:
+        data = request.get_json() or request.form
+        farmer_name = data.get("farmer_name")
+        farmer_phone = data.get("farmer_phone")
+        village = data.get("village")
+        ward = data.get("ward")
+        district = data.get("district")
+        crop_type = data.get("crop_type")
+        quantity_bags = int(data.get("quantity_bags", 0))
+        pickup_date = data.get("pickup_date")
+        
+        if not all([farmer_name, farmer_phone, village, ward, district, crop_type, quantity_bags, pickup_date]):
+            return jsonify({"success": False, "data": None, "message": "Tafadhali jaza sehemu zote."}), 400
+            
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO transport_requests 
+            (farmer_name, farmer_phone, village, ward, district, crop_type, quantity_bags, pickup_date, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (farmer_name, farmer_phone, village, ward, district, crop_type, quantity_bags, pickup_date, 'open', datetime.now().isoformat())
+        )
+        req_id = cursor.lastrowid
+        
+        matches = find_matching_requests(conn, ward, district, crop_type, pickup_date, req_id)
+        
+        # Log notification
+        create_notification(conn, f"Ombi jipya #REQ-{req_id} la {crop_type} limeundwa na {farmer_name} kule {village}.", req_id, "info")
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True, 
+            "data": {
+                "request_id": req_id,
+                "farmer_name": farmer_name,
+                "crop_type": crop_type,
+                "quantity_bags": quantity_bags,
+                "pickup_date": pickup_date,
+                "matches": matches
+            }, 
+            "message": "Ombi lako la kusafirisha mizigo limesajiliwa kikamilifu!"
+        })
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
+
+
+@app.get("/api/transport/pool/<ward>")
+def api_transport_pools(ward):
+    try:
+        conn = get_db_connection()
+        pools = conn.execute(
+            "SELECT * FROM transport_pools WHERE status = 'open' AND (LOWER(route_from) LIKE ? OR LOWER(route_from) = ?)",
+            (f"%{ward.lower()}%", ward.lower())
+        ).fetchall()
+        conn.close()
+        data = [dict(row) for row in pools]
+        return jsonify({"success": True, "data": data, "message": f"Njia za usafirishaji za kata ya {ward} zimepatikana."})
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
+
+
+@app.post("/api/transport/join/<int:pool_id>")
+def api_join_pool(pool_id):
+    try:
+        data = request.get_json() or request.form
+        farmer_name = data.get("farmer_name")
+        farmer_phone = data.get("farmer_phone")
+        bags = int(data.get("bags", 1))
+        
+        if not farmer_name or not farmer_phone:
+            return jsonify({"success": False, "data": None, "message": "Tafadhali weka jina na namba ya simu."}), 400
+            
+        conn = get_db_connection()
+        pool = conn.execute("SELECT * FROM transport_pools WHERE id = ?", (pool_id,)).fetchone()
+        
+        if not pool:
+            conn.close()
+            return jsonify({"success": False, "data": None, "message": "Usafiri haukupatikana."}), 404
+            
+        if pool["available_slots"] < bags:
+            conn.close()
+            return jsonify({"success": False, "data": None, "message": f"Nafasi hazitoshi. Nafasi zilizobaki ni {pool['available_slots']} tu."}), 400
+            
+        new_slots = pool["available_slots"] - bags
+        new_status = 'matched' if new_slots == 0 else 'open'
+        
+        conn.execute(
+            "UPDATE transport_pools SET available_slots = ?, status = ? WHERE id = ?",
+            (new_slots, new_status, pool_id)
+        )
+        
+        sms_msg = f"Ndugu {farmer_name}, umefanikiwa kujiunga na safari ya {pool['driver_name']} ({pool['driver_phone']}). Gharama ni TSh {bags * pool['cost_per_bag_tzs']:,}. Mzigo: mifuko {bags}."
+        dispatch_notification(conn, sms_msg)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "pool_id": pool_id,
+                "driver_name": pool["driver_name"],
+                "driver_phone": pool["driver_phone"],
+                "total_cost": bags * pool["cost_per_bag_tzs"],
+                "sms_confirmation": sms_msg
+            },
+            "message": "Umefanikiwa kujiunga na gari la usafirishaji!"
+        })
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
+
+
+@app.get("/transport")
+def transport_page():
+    try:
+        conn = get_db_connection()
+        pools = conn.execute("SELECT * FROM transport_pools WHERE status = 'open'").fetchall()
+        requests = conn.execute("SELECT * FROM transport_requests ORDER BY id DESC LIMIT 10").fetchall()
+        conn.close()
+        return render_template(
+            "shamba_connect.html",
+            pools=pools,
+            requests=requests,
+            active="transport",
+            heading="Shamba Connect",
+            subheading="Ungana na wakulima wenzako kusafirisha mazao kwa pamoja na kupunguza gharama."
+        )
+    except Exception as e:
+        return render_template(
+            "shamba_connect.html",
+            pools=[],
+            requests=[],
+            error=str(e),
+            active="transport",
+            heading="Shamba Connect",
+            subheading="Ungana na wakulima wenzako."
+        )
+
+
+# ============== FEATURE 3: MALANGO SALAMA (Safe M-Pesa Payment) ==============
+
+def simulate_mpesa_payment(phone, amount):
+    digits = "".join(random.choices("0123456789", k=8))
+    return f"MPE{digits}"
+
+
+@app.post("/api/payment/initiate")
+def api_payment_initiate():
+    try:
+        data = request.get_json() or request.form
+        buyer_name = data.get("buyer_name")
+        buyer_phone = data.get("buyer_phone")
+        farmer_name = data.get("farmer_name")
+        farmer_phone = data.get("farmer_phone")
+        crop_type = data.get("crop_type")
+        quantity_kg = float(data.get("quantity_kg", 0))
+        amount_tzs = float(data.get("amount_tzs", 0))
+        
+        if not all([buyer_name, buyer_phone, farmer_name, farmer_phone, crop_type, quantity_kg, amount_tzs]):
+            return jsonify({"success": False, "data": None, "message": "Tafadhali jaza sehemu zote za malipo."}), 400
+            
+        ref = simulate_mpesa_payment(buyer_phone, amount_tzs)
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO transactions 
+            (buyer_name, buyer_phone, farmer_name, farmer_phone, crop_type, quantity_kg, amount_tzs, mpesa_reference, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (buyer_name, buyer_phone, farmer_name, farmer_phone, crop_type, quantity_kg, amount_tzs, ref, 'escrowed', datetime.now().isoformat())
+        )
+        tx_id = cursor.lastrowid
+        
+        # Log simulated notification
+        msg = f"MALIPO SALAMA: TSh {amount_tzs:,} kutoka kwa {buyer_name} yamepokelewa na kuwekwa dhamana (Escrow) kwa ajili ya {farmer_name}. Ref: {ref}."
+        create_notification(conn, msg, None, "success")
+        
+        # Trigger SMS notification to farmer
+        sms_msg = f"AgriMove: Malipo ya TSh {amount_tzs:,} kutoka kwa Mnunuzi {buyer_name} yamepokelewa salama kwenye mfuko wa dhamana. Ref: {ref}. Yatatumwa kwako punde utakapothibitisha mzigo kupokelewa."
+        dispatch_notification(conn, sms_msg)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "transaction_id": tx_id,
+                "mpesa_reference": ref,
+                "status": "escrowed",
+                "sms_text": sms_msg
+            },
+            "message": "Malipo yamewekwa dhamana (Escrow) kwa ufanisi!"
+        })
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
+
+
+@app.post("/api/payment/confirm")
+def api_payment_confirm():
+    try:
+        data = request.get_json() or request.form
+        tx_id = data.get("transaction_id")
+        
+        if not tx_id:
+            return jsonify({"success": False, "data": None, "message": "Namba ya muamala inahitajika."}), 400
+            
+        conn = get_db_connection()
+        tx = conn.execute("SELECT * FROM transactions WHERE id = ?", (tx_id,)).fetchone()
+        if not tx:
+            conn.close()
+            return jsonify({"success": False, "data": None, "message": "Muamala haukupatikana."}), 404
+            
+        conn.execute(
+            "UPDATE transactions SET status = 'released' WHERE id = ?",
+            (tx_id,)
+        )
+        
+        # Log notification
+        msg = f"MALIPO SALAMA: Pesa TSh {tx['amount_tzs']:,} zimeachiwa kwa mkulima {tx['farmer_name']}. Ref: {tx['mpesa_reference']}."
+        create_notification(conn, msg, None, "success")
+        
+        # Trigger SMS to farmer
+        sms_msg = f"AgriMove: Malipo ya dhamana ya TSh {tx['amount_tzs']:,} yameachiwa na mnunuzi na kutumwa kwenye namba yako ya M-Pesa. Ref: {tx['mpesa_reference']}."
+        dispatch_notification(conn, sms_msg)
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            "success": True,
+            "data": {
+                "transaction_id": tx_id,
+                "status": "released",
+                "sms_text": sms_msg
+            },
+            "message": "Gharama zimelipwa kwa mkulima na muamala umekamilika!"
+        })
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
+
+
+@app.get("/api/payment/status/<int:tx_id>")
+def api_payment_status(tx_id):
+    try:
+        conn = get_db_connection()
+        tx = conn.execute("SELECT * FROM transactions WHERE id = ?", (tx_id,)).fetchone()
+        conn.close()
+        if not tx:
+            return jsonify({"success": False, "data": None, "message": "Muamala haukupatikana."}), 404
+        return jsonify({"success": True, "data": dict(tx), "message": "Hali ya muamala imepatikana."})
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
+
+
+@app.get("/payments")
+def payments_page():
+    try:
+        conn = get_db_connection()
+        transactions = conn.execute("SELECT * FROM transactions ORDER BY id DESC LIMIT 15").fetchall()
+        conn.close()
+        return render_template(
+            "malango_salama.html",
+            transactions=transactions,
+            active="payments",
+            heading="Malango Salama",
+            subheading="Lipa na upokee malipo salama kwa kutumia M-Pesa Escrow bila hofu ya kupoteza fedha."
+        )
+    except Exception as e:
+        return render_template(
+            "malango_salama.html",
+            transactions=[],
+            error=str(e),
+            active="payments",
+            heading="Malango Salama",
+            subheading="Lipa na upokee malipo salama."
+        )
+
+
+# ============== FEATURE 4: HIFADHI YANGU (Storage Finder) ==============
+
+@app.get("/api/storage")
+def api_storage_all():
+    try:
+        conn = get_db_connection()
+        facilities = conn.execute("SELECT * FROM storage_facilities ORDER BY name").fetchall()
+        conn.close()
+        data = [dict(row) for row in facilities]
+        return jsonify({"success": True, "data": data, "message": "Ghala zote zimepatikana."})
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
+
+
+@app.get("/api/storage/<region>")
+def api_storage_by_region(region):
+    try:
+        conn = get_db_connection()
+        facilities = conn.execute(
+            "SELECT * FROM storage_facilities WHERE LOWER(region) = ? ORDER BY name",
+            (region.lower(),)
+        ).fetchall()
+        conn.close()
+        data = [dict(row) for row in facilities]
+        return jsonify({"success": True, "data": data, "message": f"Ghala za mkoa wa {region} zimepatikana."})
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
+
+
+@app.get("/api/storage/nearest")
+def api_storage_nearest():
+    try:
+        lat_str = request.args.get("lat")
+        lng_str = request.args.get("lng")
+        if not lat_str or not lng_str:
+            return jsonify({"success": False, "data": None, "message": "Kigezo cha lat na lng kinahitajika."}), 400
+            
+        lat = float(lat_str)
+        lng = float(lng_str)
+        
+        conn = get_db_connection()
+        facilities = conn.execute("SELECT * FROM storage_facilities").fetchall()
+        conn.close()
+        
+        import math
+        data = []
+        for row in facilities:
+            d_row = dict(row)
+            dist_km = math.sqrt((lat - d_row["gps_lat"])**2 + (lng - d_row["gps_lng"])**2) * 111.0
+            d_row["distance_km"] = round(dist_km, 2)
+            data.append(d_row)
+            
+        data.sort(key=lambda x: x["distance_km"])
+        
+        return jsonify({"success": True, "data": data, "message": "Ghala za karibu zaidi zimepatikana."})
+    except Exception as e:
+        return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
+
+
+@app.get("/storage")
+def storage_page():
+    try:
+        conn = get_db_connection()
+        facilities = conn.execute("SELECT * FROM storage_facilities ORDER BY name").fetchall()
+        
+        regions_rows = conn.execute("SELECT DISTINCT region FROM storage_facilities ORDER BY region").fetchall()
+        regions = [r["region"] for r in regions_rows]
+        
+        conn.close()
+        return render_template(
+            "hifadhi_yangu.html",
+            facilities=facilities,
+            regions=regions,
+            active="storage",
+            heading="Hifadhi Yangu",
+            subheading="Tafuta maghala ya karibu ya kuhifadhia mazao yako na mifumo ya Warehouse Receipt (WRS)."
+        )
+    except Exception as e:
+        return render_template(
+            "hifadhi_yangu.html",
+            facilities=[],
+            regions=[],
+            error=str(e),
+            active="storage",
+            heading="Hifadhi Yangu",
+            subheading="Tafuta maghala."
+        )
 
 
 # ============== REST API ENDPOINTS ==============
@@ -1378,23 +1945,21 @@ def farmer_offers(farmer_id):
 
 @app.route("/ussd-simulator")
 def ussd_simulator():
-    """Render USSD & SMS Simulator page"""
     conn = get_db_connection()
-    requests_rows = conn.execute(
-        """SELECT r.id, f.name as farmer_name, r.pickup_location, r.destination,
-                  r.goods_type, r.status
-           FROM requests r JOIN farmers f ON r.farmer_id = f.id 
-           ORDER BY r.id DESC LIMIT 10"""
-    ).fetchall()
+    prices = conn.execute("SELECT * FROM market_prices ORDER BY crop_name_swahili").fetchall()
+    pools = conn.execute("SELECT * FROM transport_pools WHERE status = 'open'").fetchall()
+    storage = conn.execute("SELECT * FROM storage_facilities ORDER BY name").fetchall()
+    transactions = conn.execute("SELECT * FROM transactions ORDER BY id DESC LIMIT 10").fetchall()
     conn.close()
     return render_template(
         "ussd_simulator.html",
         active="ussd",
-        heading="USSD & SMS Simulation Hub",
-        subheading="Test Africa's Talking-style USSD, SMS alerts, and GPS journeys.",
-        requests=requests_rows,
-        callback_url=url_for("api_ussd", _external=True),
-        sms_status=sms_status,
+        heading="USSD Demo Simulator",
+        subheading="Simulate Tanzania *384# USSD menu flow to check prices, find transport pools, locate storage, and view escrow payments.",
+        prices=[dict(row) for row in prices],
+        pools=[dict(row) for row in pools],
+        storage=[dict(row) for row in storage],
+        transactions=[dict(row) for row in transactions]
     )
 
 
@@ -1968,5 +2533,575 @@ def admin_verify_buyer(buyer_id):
     return redirect(url_for("admin_dashboard"))
 
 
+
+# ============== DEMO RESET ROUTE ==============
+
+@app.get("/setup-demo")
+def setup_demo():
+    """
+    Hackathon demo reset: clears and reseeds ALL tables with realistic
+    Tanzanian sample data. Visit /setup-demo in a browser to trigger.
+    """
+    conn = get_db_connection()
+    now = datetime.now().isoformat(timespec="seconds")
+
+    try:
+        # ── 1. Clear all seeded tables (order respects FK constraints) ──
+        for tbl in [
+            "notifications", "tracking", "requests",
+            "price_alerts", "buyer_offers", "profit_estimates",
+            "trusted_buyers", "market_prices",
+            "transactions", "transport_pools", "transport_requests",
+            "storage_facilities", "drivers", "farmers",
+        ]:
+            conn.execute(f"DELETE FROM {tbl}")
+            conn.execute(f"DELETE FROM sqlite_sequence WHERE name='{tbl}'")
+
+        # ── 2. Farmers ──
+        farmers = [
+            ("Amina Mwangi",    "+255 712 111 001", 4.8, 12, 10, now, 340),
+            ("Juma Kikwete",    "+255 754 222 002", 4.5, 8,  7,  now, 210),
+            ("Grace Msellem",   "+255 689 333 003", 4.9, 20, 18, now, 580),
+            ("Hassan Nyerere",  "+255 763 444 004", 4.2, 5,  4,  now, 120),
+            ("Fatuma Salim",    "+255 621 555 005", 4.7, 15, 13, now, 420),
+        ]
+        conn.executemany(
+            """INSERT INTO farmers
+               (name, phone, rating, total_requests, total_delivered, member_since, points)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            farmers,
+        )
+
+        # ── 3. Drivers ──
+        drivers = [
+            ("Serikali Mwamba",   "+255 712 600 101", "available", 4.9, 210, 6, 4_200_000, "truck"),
+            ("Baraka Juma",       "+255 754 600 102", "available", 4.7, 145, 4, 2_900_000, "truck"),
+            ("Neema Odhiambo",    "+255 689 600 103", "available", 4.6,  98, 3, 1_960_000, "van"),
+            ("Daniel Msigwa",     "+255 763 600 104", "busy",       4.5,  67, 2, 1_340_000, "pickup"),
+        ]
+        conn.executemany(
+            """INSERT INTO drivers
+               (name, phone, availability, rating, total_deliveries, completed_today, earnings, vehicle_type)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            drivers,
+        )
+
+        # ── 4. Delivery requests ──
+        sample_requests = [
+            (1, "Morogoro Farm Gate",    "Dar es Salaam",  "Maize",    "50 bags",    "Delivered",   1, 45,  42, 280.0, 1_950_000, now),
+            (2, "Mvomero Cooperative",   "Dodoma",         "Rice",     "30 bags",    "In Transit",  2, 90,  None, 320.0, 1_600_000, now),
+            (3, "Ifakara Collection Point","Mwanza",        "Beans",    "20 bags",    "Accepted",    3, 120, None, 410.0, 1_200_000, now),
+            (4, "Moshi Highland Farms",  "Arusha",         "Tomatoes", "15 bags",    "Pending",     None, None, None, 80.0, 600_000, now),
+            (5, "Morogoro Farm Gate",    "Nairobi",        "Maize",    "100 bags",   "Delivered",   1, 180, 175, 640.0, 6_400_000, now),
+        ]
+        conn.executemany(
+            """INSERT INTO requests
+               (farmer_id, pickup_location, destination, goods_type, quantity,
+                status, driver_id, eta_minutes, actual_time, distance_km, price, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            sample_requests,
+        )
+
+        # ── 5. Notifications ──
+        notifs = [
+            (1, "Delivery completed! Maize delivered to Dar es Salaam.", "success", now),
+            (2, "Your goods are on the way. Driver: Baraka Juma.",       "info",    now),
+            (3, "Driver assigned. ETA: 120 minutes.",                     "info",    now),
+            (4, "Request received. Searching for available drivers.",     "info",    now),
+        ]
+        conn.executemany(
+            "INSERT INTO notifications (request_id, message, type, created_at) VALUES (?,?,?,?)",
+            notifs,
+        )
+
+        # ── 6. Market prices (Bei za Soko) ──
+        tz_prices = [
+            # (crop_name, crop_name_swahili, region, market_name, price, price_per_kg_tzs, demand_level, trend, price_trend)
+            ("Maize",    "Mahindi",  "Dar es Salaam", "Kariakoo Market",   95_000, 950,  "High",   "Rising", "up",     now),
+            ("Maize",    "Mahindi",  "Arusha",        "Arusha Market",     88_000, 880,  "Medium", "Stable", "stable", now),
+            ("Maize",    "Mahindi",  "Mwanza",        "Mwanza Market",     82_000, 820,  "Medium", "Stable", "stable", now),
+            ("Maize",    "Mahindi",  "Mbeya",         "Mbeya Market",      78_000, 780,  "Low",    "Falling","down",   now),
+            ("Maize",    "Mahindi",  "Dodoma",        "Dodoma Market",     90_000, 900,  "High",   "Rising", "up",     now),
+            ("Rice",     "Mpunga",   "Dar es Salaam", "Kariakoo Market",  200_000,2000,  "High",   "Rising", "up",     now),
+            ("Rice",     "Mpunga",   "Arusha",        "Arusha Market",    185_000,1850,  "Medium", "Stable", "stable", now),
+            ("Rice",     "Mpunga",   "Mwanza",        "Mwanza Market",    175_000,1750,  "Medium", "Falling","down",   now),
+            ("Rice",     "Mpunga",   "Mbeya",         "Mbeya Market",     170_000,1700,  "Low",    "Stable", "stable", now),
+            ("Rice",     "Mpunga",   "Dodoma",        "Dodoma Market",    195_000,1950,  "High",   "Rising", "up",     now),
+            ("Cassava",  "Muhogo",   "Dar es Salaam", "Kariakoo Market",   55_000, 550,  "High",   "Stable", "stable", now),
+            ("Cassava",  "Muhogo",   "Mwanza",        "Mwanza Market",     45_000, 450,  "Medium", "Falling","down",   now),
+            ("Tomatoes", "Nyanya",   "Dar es Salaam", "Kariakoo Market",  150_000,1500,  "High",   "Rising", "up",     now),
+            ("Tomatoes", "Nyanya",   "Arusha",        "Arusha Market",    130_000,1300,  "Medium", "Stable", "stable", now),
+            ("Tomatoes", "Nyanya",   "Dodoma",        "Dodoma Market",    140_000,1400,  "High",   "Rising", "up",     now),
+            ("Onions",   "Vitunguu", "Dar es Salaam", "Kariakoo Market",  180_000,1800,  "High",   "Rising", "up",     now),
+            ("Onions",   "Vitunguu", "Arusha",        "Arusha Market",    160_000,1600,  "Medium", "Stable", "stable", now),
+            ("Coffee",   "Kahawa",   "Arusha",        "Arusha Auction",   850_000,8500,  "High",   "Rising", "up",     now),
+            ("Coffee",   "Kahawa",   "Mbeya",         "Mbeya Market",     820_000,8200,  "High",   "Stable", "stable", now),
+            ("Cashews",  "Korosho",  "Dar es Salaam", "Kariakoo Market",  600_000,6000,  "High",   "Rising", "up",     now),
+            ("Cashews",  "Korosho",  "Mtwara",        "Mtwara Port",      550_000,5500,  "Medium", "Stable", "stable", now),
+            ("Beans",    "Maharagwe","Dar es Salaam", "Kariakoo Market",  180_000,1800,  "High",   "Rising", "up",     now),
+            ("Beans",    "Maharagwe","Dodoma",        "Dodoma Market",    165_000,1650,  "Medium", "Stable", "stable", now),
+        ]
+        conn.executemany(
+            """INSERT OR IGNORE INTO market_prices
+               (crop_name, crop_name_swahili, region, market_name, price,
+                price_per_kg_tzs, demand_level, trend, price_trend, updated_at, last_updated)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?)""",
+            [(r[0],r[1],r[2],r[3],r[4],r[5],r[6],r[7],r[8],r[9],r[9]) for r in tz_prices],
+        )
+
+        # ── 7. Transport pools (Shamba Connect) ──
+        tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        day2      = (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")
+        pools = [
+            (200, "Baraka Juma",     "+255 754 600 102", "Morogoro",  "Dar es Salaam",  tomorrow,  800,  80, "open"),
+            (150, "Serikali Mwamba", "+255 712 600 101", "Moshi",     "Arusha",         tomorrow, 1000,  60, "open"),
+            (300, "Daniel Msigwa",   "+255 763 600 104", "Iringa",    "Dar es Salaam",  day2,      750, 120, "open"),
+            (100, "Neema Odhiambo",  "+255 689 600 103", "Dodoma",    "Mwanza",         day2,     1200,  40, "open"),
+        ]
+        conn.executemany(
+            """INSERT INTO transport_pools
+               (truck_capacity_bags, driver_name, driver_phone, route_from, route_to,
+                departure_date, cost_per_bag_tzs, available_slots, status)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            pools,
+        )
+
+        # ── 8. Transport requests ──
+        tr_requests = [
+            ("Amina Mwangi",  "+255 712 111 001", "Kimara",    "Kimara",    "Ilala",    "Maize",   40, tomorrow, "open", now),
+            ("Juma Kikwete",  "+255 754 222 002", "Kibosho",   "Kibosho",   "Moshi",    "Coffee",  20, tomorrow, "open", now),
+            ("Grace Msellem", "+255 689 333 003", "Mafinga",   "Mafinga",   "Iringa",   "Beans",   60, day2,     "open", now),
+            ("Hassan Nyerere","+255 763 444 004", "Chamwino",  "Chamwino",  "Dodoma",   "Rice",    35, day2,     "open", now),
+        ]
+        conn.executemany(
+            """INSERT INTO transport_requests
+               (farmer_name, farmer_phone, village, ward, district, crop_type,
+                quantity_bags, pickup_date, status, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            tr_requests,
+        )
+
+        # ── 9. Transactions / Malango Salama ──
+        txns = [
+            ("Salim Corp",       "+255 712 999 111", "Amina Mwangi",  "+255 712 111 001",
+             "Maize",   500, 475_000, "MP-2024-001", "released",  now),
+            ("Mwangi Traders",   "+254 722 888 222", "Grace Msellem", "+255 689 333 003",
+             "Beans",   200, 360_000, "MP-2024-002", "pending",   now),
+            ("Dodoma Harvests",  "+255 688 111 222", "Juma Kikwete",  "+255 754 222 002",
+             "Rice",    150, 300_000, "MP-2024-003", "confirmed", now),
+            ("Kigali Wholesalers","+250 788 333 444","Fatuma Salim",  "+255 621 555 005",
+             "Coffee",   50, 425_000, "MP-2024-004", "pending",   now),
+        ]
+        conn.executemany(
+            """INSERT INTO transactions
+               (buyer_name, buyer_phone, farmer_name, farmer_phone, crop_type,
+                quantity_kg, amount_tzs, mpesa_reference, status, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?,?)""",
+            txns,
+        )
+
+        # ── 10. Storage facilities (Hifadhi Yangu) ──
+        stores = [
+            ("Kariakoo Cold Store",   "cold_storage",   "Dar es Salaam","Ilala",   "Kariakoo",   -6.8161, 39.2780, 500,  180, "+255 22 218 0001", 3_500, 1),
+            ("Arusha Grain Depot",    "warehouse",      "Arusha",       "Arusha",  "Sakina",     -3.3670, 36.6956, 800,  400, "+255 27 254 3322", 2_800, 1),
+            ("Mwanza Lake Store",     "warehouse",      "Mwanza",       "Nyamagana","Mbugani",   -2.5100, 32.9105, 300,   90, "+255 28 250 0110", 2_200, 0),
+            ("Mbeya Highland Silo",   "silo",           "Mbeya",        "Mbeya",   "Forest",     -8.9060, 33.4440, 1200, 700, "+255 25 250 1234", 1_800, 1),
+            ("Dodoma Central Store",  "warehouse",      "Dodoma",       "Dodoma",  "Makole",     -6.1800, 35.7400, 600,  250, "+255 26 232 0089", 2_500, 0),
+            ("Morogoro Farmers Hub",  "warehouse",      "Morogoro",     "Morogoro","Mazimbu",    -6.8210, 37.6610, 400,  200, "+255 23 261 4456", 2_000, 1),
+            ("Iringa Grain Centre",   "silo",           "Iringa",       "Iringa",  "Mlandege",   -7.7700, 35.7000, 700,  380, "+255 26 270 2233", 1_900, 1),
+        ]
+        conn.executemany(
+            """INSERT INTO storage_facilities
+               (name, facility_type, region, district, village, gps_lat, gps_lng,
+                capacity_tons, available_tons, contact_phone, cost_per_bag_per_month_tzs, accepts_wrs)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+            stores,
+        )
+
+        # ── 11. Trusted buyers ──
+        t_buyers = [
+            (1, "Salim Corp",          "+255 712 999 111", "Verified", "Admin", now, 4.5, 34),
+            (2, "Mwangi Traders",      "+254 722 888 222", "Verified", "Admin", now, 4.8, 120),
+            (3, "Dodoma Harvests",     "+255 688 111 222", "Pending",  None,    now, 4.2, 12),
+            (4, "Kigali Wholesalers",  "+250 788 333 444", "Verified", "Admin", now, 4.9, 210),
+        ]
+        conn.executemany(
+            """INSERT OR IGNORE INTO trusted_buyers
+               (buyer_id, buyer_name, phone, verification_status, verified_by, verified_at,
+                rating, total_purchases, created_at)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            [(b[0],b[1],b[2],b[3],b[4],b[5],b[6],b[7],now) for b in t_buyers],
+        )
+
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "success": True,
+            "message": (
+                "Demo reset complete! Seeded: 5 farmers, 4 drivers, 5 delivery requests, "
+                "23 market prices (Bei za Soko), 4 transport pools, 4 transport requests, "
+                "4 M-Pesa transactions, 7 storage facilities, 4 trusted buyers."
+            ),
+            "data": {
+                "farmers": 5,
+                "drivers": 4,
+                "delivery_requests": 5,
+                "market_prices": 23,
+                "transport_pools": 4,
+                "transport_requests": 4,
+                "transactions": 4,
+                "storage_facilities": 7,
+                "trusted_buyers": 4,
+            },
+            "navigate": {
+                "home":             "/",
+                "bei_za_soko":      "/market-prices",
+                "shamba_connect":   "/transport",
+                "malango_salama":   "/payments",
+                "hifadhi_yangu":    "/storage",
+                "ussd_simulator":   "/ussd-simulator",
+                "admin":            "/admin",
+            }
+        })
+
+    except Exception as e:
+        conn.rollback()
+        conn.close()
+        return jsonify({"success": False, "message": str(e), "data": {}}), 500
+
+
+# ============== FEATURE A: FLOATING CHATBOT (Smartphone Users) ==============
+
+from services.chatbot import get_ai_response, text_to_swahili_audio
+from gtts import gTTS
+import uuid
+
+@app.route('/api/chat', methods=['POST'])
+def ai_chat():
+    data = request.get_json()
+    user_message = data.get('message', '')
+    
+    # Get current prices from DB to give AI context
+    try:
+        conn = get_db_connection()
+        prices = conn.execute("SELECT crop_name, region, price FROM market_prices").fetchall()
+        price_list = [f"- {row['crop_name']} in {row['region']}: TSh {row['price']}" for row in prices]
+        prices_context = "\n".join(price_list)
+        conn.close()
+    except Exception as e:
+        prices_context = "Prices currently unavailable."
+        
+    # Get response from Google Gemini Chatbot Service
+    reply = get_ai_response(user_message)
+    
+    # Convert reply to audio using service helper
+    audio_url = text_to_swahili_audio(reply)
+        
+    return jsonify({
+        "success": True,
+        "reply": reply,
+        "audio_url": audio_url
+    })
+
+
+
+@app.route('/api/voice/speak', methods=['POST'])
+def voice_speak():
+    data = request.get_json()
+    text = data.get('text', '')
+    if not text:
+        return jsonify({"success": False, "error": "No text provided"}), 400
+        
+    try:
+        audio_filename = f"speak_{uuid.uuid4().hex[:8]}.mp3"
+        os.makedirs("static/audio", exist_ok=True)
+        tts = gTTS(text=text, lang='sw', slow=False)
+        tts.save(f"static/audio/{audio_filename}")
+        audio_url = f"/static/audio/{audio_filename}"
+    except Exception as e:
+        print(f"TTS speak Error: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+        
+    return jsonify({
+        "success": True,
+        "audio_url": audio_url
+    })
+
+
+# ============== FEATURE B: IVR VOICE (Feature Phones / 2G / No Internet) ==============
+
+def save_transport_callback(phone):
+    """Save caller number for transport callback"""
+    import sqlite3
+    conn = sqlite3.connect(DATABASE)
+    conn.execute(
+        """CREATE TABLE IF NOT EXISTS transport_callbacks (
+           phone TEXT UNIQUE,
+           created_at TEXT)"""
+    )
+    conn.execute(
+        """INSERT OR IGNORE INTO transport_callbacks 
+           (phone, created_at) VALUES (?, datetime('now'))""",
+        (phone,)
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_price_from_db(crop_key):
+    # Map Swahili crop keys to English
+    mapping = {
+        'mahindi': 'Maize',
+        'mpunga': 'Rice',
+        'nyanya': 'Tomatoes',
+        'vitunguu': 'Beans'
+    }
+    english_name = mapping.get(crop_key.lower(), 'Maize')
+    
+    prices = {}
+    try:
+        conn = get_db_connection()
+        for region in ['Dar es Salaam', 'Arusha', 'Mbeya', 'Dodoma']:
+            row = conn.execute(
+                "SELECT price FROM market_prices WHERE (LOWER(crop_name) = ? OR LOWER(crop_name_swahili) = ?) AND LOWER(region) = ?",
+                (english_name.lower(), english_name.lower(), region.lower())
+            ).fetchone()
+            if row:
+                prices[region.lower().replace(" ", "")] = int(row['price'] / 100)
+        conn.close()
+    except Exception as e:
+        print(f"Error querying price: {e}")
+        
+    if 'daressalaam' in prices:
+        prices['kariakoo'] = prices['daressalaam']
+    if 'kariakoo' not in prices:
+        prices['kariakoo'] = 950 if english_name == 'Maize' else 1500
+    if 'arusha' not in prices:
+        prices['arusha'] = 880 if english_name == 'Maize' else 1400
+    if 'mbeya' not in prices:
+        prices['mbeya'] = 850 if english_name == 'Maize' else 1350
+        
+    return prices
+
+
+def get_storage_from_db(region):
+    try:
+        conn = get_db_connection()
+        row = conn.execute(
+            "SELECT * FROM storage_facilities WHERE LOWER(region) = ? ORDER BY id DESC LIMIT 1",
+            (region.lower(),)
+        ).fetchone()
+        conn.close()
+        if row:
+            return {
+                'name': row['name'],
+                'available': row['available_tons'],
+                'cost': row['cost_per_bag_per_month_tzs'],
+                'phone': row['contact_phone']
+            }
+    except Exception as e:
+        print(f"Error querying storage: {e}")
+        
+    defaults = {
+        'Mbeya': {
+            'name': 'Ghala la Ushirika Mbeya',
+            'available': 120,
+            'cost': 1500,
+            'phone': '0754 111 222'
+        },
+        'Arusha': {
+            'name': 'Arusha Grains Silo',
+            'available': 80,
+            'cost': 1800,
+            'phone': '0784 333 444'
+        },
+        'Dar es Salaam': {
+            'name': 'Kurasini Cold Storage',
+            'available': 45,
+            'cost': 2500,
+            'phone': '0715 555 666'
+        },
+        'Dodoma': {
+            'name': 'Dodoma National Reserve',
+            'available': 300,
+            'cost': 1200,
+            'phone': '0768 777 888'
+        }
+    }
+    return defaults.get(region, {
+        'name': f'Ghala la Mkoa wa {region}',
+        'available': 50,
+        'cost': 2000,
+        'phone': '0800 000 000'
+    })
+
+
+@app.route('/voice', methods=['POST', 'GET'])
+def ivr_handler():
+    """
+    Africa's Talking calls this when farmer dials your number.
+    We respond with XML that tells AT what to say and do.
+    """
+    response = """<?xml version="1.0" encoding="UTF-8"?>
+    <Response>
+        <GetDigits timeout="15" 
+                   finishOnKey="#" 
+                   callbackUrl="/voice/handle">
+            <Say voice="woman" playBeep="false">
+                Karibu AgriMove Tanzania. 
+                Msaada wa wakulima.
+                Bonyeza moja kwa bei za mazao.
+                Bonyeza mbili kwa kutafuta gari.
+                Bonyeza tatu kwa hifadhi karibu nawe.
+                Bonyeza nne kuzungumza na wakala.
+                Kisha bonyeza gridi.
+            </Say>
+        </GetDigits>
+    </Response>"""
+    return response, 200, {'Content-Type': 'text/plain'}
+
+
+@app.route('/voice/handle', methods=['POST'])
+def ivr_handle():
+    """Handle farmer's keypad selection"""
+    digits = request.form.get('dtmfDigits', '')
+    caller = request.form.get('callerNumber', '')
+    
+    if digits == '1':
+        response = """<?xml version="1.0" encoding="UTF-8"?>
+        <Response>
+            <GetDigits timeout="10" 
+                       finishOnKey="#"
+                       callbackUrl="/voice/prices">
+                <Say voice="woman">
+                    Bei za mazao leo.
+                    Bonyeza moja kwa mahindi.
+                    Bonyeza mbili kwa mpunga.
+                    Bonyeza tatu kwa nyanya.
+                    Bonyeza nne kwa vitunguu.
+                    Kisha bonyeza gridi.
+                </Say>
+            </GetDigits>
+        </Response>"""
+    
+    elif digits == '2':
+        response = """<?xml version="1.0" encoding="UTF-8"?>
+        <Response>
+            <Say voice="woman">
+                Huduma ya kutafuta gari.
+                Tutakupigia simu ndani ya dakika kumi
+                kukuunganisha na gari karibu nawe.
+                Nambari yako imehifadhiwa.
+                Asante kwa kutumia AgriMove Tanzania.
+            </Say>
+        </Response>"""
+        save_transport_callback(caller)
+    
+    elif digits == '3':
+        response = """<?xml version="1.0" encoding="UTF-8"?>
+        <Response>
+            <GetDigits timeout="10"
+                       finishOnKey="#"
+                       callbackUrl="/voice/storage">
+                <Say voice="woman">
+                    Hifadhi karibu nawe.
+                    Bonyeza moja kwa Mbeya.
+                    Bonyeza mbili kwa Arusha.
+                    Bonyeza tatu kwa Dar es Salaam.
+                    Bonyeza nne kwa Dodoma.
+                    Kisha bonyeza gridi.
+                </Say>
+            </GetDigits>
+        </Response>"""
+    
+    elif digits == '4':
+        response = """<?xml version="1.0" encoding="UTF-8"?>
+        <Response>
+            <Say voice="woman">
+                Tunakupeleka kwa wakala wetu.
+                Subiri kidogo tafadhali.
+            </Say>
+            <Dial record="false">
+                <Number>+255XXXXXXXXX</Number>
+            </Dial>
+        </Response>"""
+    
+    else:
+        response = """<?xml version="1.0" encoding="UTF-8"?>
+        <Response>
+            <Redirect>/voice</Redirect>
+        </Response>"""
+    
+    return response, 200, {'Content-Type': 'text/plain'}
+
+
+@app.route('/voice/prices', methods=['POST'])
+def ivr_prices():
+    """Speak crop price when farmer selects crop"""
+    digits = request.form.get('dtmfDigits', '')
+    
+    crops = {
+        '1': ('Mahindi', 'mahindi'),
+        '2': ('Mpunga', 'mpunga'),
+        '3': ('Nyanya', 'nyanya'),
+        '4': ('Vitunguu', 'vitunguu')
+    }
+    
+    crop_display, crop_key = crops.get(
+        digits, ('Mahindi', 'mahindi')
+    )
+    
+    price = get_price_from_db(crop_key)
+    
+    price_text = f"""Bei ya {crop_display} leo.
+        Kariakoo Dar es Salaam, 
+        shilingi {price.get('kariakoo', 600)} kwa kilo.
+        Soko la Arusha, 
+        shilingi {price.get('arusha', 550)} kwa kilo.
+        Soko la Mbeya, 
+        shilingi {price.get('mbeya', 500)} kwa kilo.
+        Asante kwa kutumia AgriMove Tanzania.
+        Piga tena kupata bei nyingine."""
+    
+    response = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <Response>
+        <Say voice="woman">{price_text}</Say>
+        <Redirect>/voice</Redirect>
+    </Response>"""
+    
+    return response, 200, {'Content-Type': 'text/plain'}
+
+
+@app.route('/voice/storage', methods=['POST'])
+def ivr_storage():
+    """Speak storage info for selected region"""
+    digits = request.form.get('dtmfDigits', '')
+    
+    regions = {
+        '1': 'Mbeya', '2': 'Arusha',
+        '3': 'Dar es Salaam', '4': 'Dodoma'
+    }
+    region = regions.get(digits, 'Mbeya')
+    storage = get_storage_from_db(region)
+    
+    text = f"""Hifadhi katika {region}.
+        Jina: {storage.get('name', 'Ghala la Mkoa')}.
+        Nafasi iliyobaki: 
+        tani {storage.get('available', 50)}.
+        Bei: shilingi 
+        {storage.get('cost', 2000)} kwa gunia kwa mwezi.
+        Piga simu: {storage.get('phone', '0800 000 000')}.
+        Asante. Tutaonana tena."""
+    
+    response = f"""<?xml version="1.0" encoding="UTF-8"?>
+    <Response>
+        <Say voice="woman">{text}</Say>
+    </Response>"""
+    
+    return response, 200, {'Content-Type': 'text/plain'}
+
+
 if __name__ == "__main__":
     app.run(debug=True)
+
