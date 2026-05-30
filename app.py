@@ -4,7 +4,7 @@ import sqlite3
 from datetime import datetime, timedelta
 import json
 
-from flask import Flask, abort, flash, jsonify, redirect, render_template, request, url_for
+from flask import Flask, Response, abort, flash, jsonify, redirect, render_template, request, url_for
 
 # Load environment variables
 from dotenv import load_dotenv
@@ -73,30 +73,51 @@ LOCATION_COORDS = {
 # ============== AFRICA'S TALKING SDK INITIALIZATION ==============
 AT_USERNAME = os.environ.get("AT_USERNAME", "sandbox")
 AT_API_KEY = os.environ.get("AT_API_KEY")
+AT_VOICE_NUMBER = os.environ.get("AT_VOICE_NUMBER", "")
+AT_AGENT_NUMBER = os.environ.get("AT_AGENT_NUMBER", "")
+VOICE_BASE_URL = os.environ.get("VOICE_BASE_URL", "").rstrip("/")
 
 sms_client = None
+voice_client = None
 sms_status = {
     "enabled": False,
     "username": AT_USERNAME,
     "mode": "simulated",
     "message": "AT_API_KEY is not set. Using local simulated notifications.",
 }
+voice_status = {
+    "enabled": False,
+    "username": AT_USERNAME,
+    "voice_number": AT_VOICE_NUMBER or None,
+    "agent_number": AT_AGENT_NUMBER or None,
+    "base_url": VOICE_BASE_URL or None,
+    "mode": "simulated",
+    "message": "AT_API_KEY is not set. Voice IVR runs locally; configure AT for live calls.",
+}
 if AT_API_KEY:
     try:
         import africastalking
         africastalking.initialize(AT_USERNAME, AT_API_KEY)
         sms_client = africastalking.SMS
+        voice_client = africastalking.Voice
         sms_status.update({
             "enabled": True,
             "mode": "africas_talking",
             "message": "Africa's Talking SMS SDK initialized successfully.",
         })
-        print("Africa's Talking SMS SDK initialized successfully.")
+        voice_status.update({
+            "enabled": True,
+            "mode": "africas_talking",
+            "message": "Africa's Talking Voice SDK initialized successfully.",
+        })
+        print("Africa's Talking SMS and Voice SDK initialized successfully.")
     except ImportError:
         sms_status["message"] = "africastalking module not found. Run 'pip install -r requirements.txt'. Falling back to simulated notifications."
+        voice_status["message"] = sms_status["message"]
         print("africastalking module not found. Run 'pip install africastalking'. Falling back to simulated notifications.")
     except Exception as e:
         sms_status["message"] = f"Africa's Talking SDK could not initialize: {e}"
+        voice_status["message"] = sms_status["message"]
         print(f"Africa's Talking SDK could not initialize: {e}")
 
 
@@ -228,6 +249,16 @@ def init_db():
     )
     conn.execute(
         """
+        CREATE TABLE IF NOT EXISTS buyers (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            phone TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
         CREATE TABLE IF NOT EXISTS buyer_offers (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             buyer_id INTEGER NOT NULL,
@@ -350,6 +381,59 @@ def init_db():
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS transport_callbacks (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone TEXT NOT NULL UNIQUE,
+            source TEXT DEFAULT 'voice',
+            status TEXT DEFAULT 'pending',
+            transport_request_id INTEGER,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS voice_call_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            session_id TEXT,
+            caller_number TEXT,
+            destination_number TEXT,
+            event_type TEXT,
+            dtmf_digits TEXT,
+            duration_seconds INTEGER,
+            hangup_cause TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            version INTEGER NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            applied_at TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+
+
+def apply_db_patches():
+    """Apply lightweight schema patches for existing SQLite databases."""
+    conn = get_db_connection()
+    for sql in (
+        "ALTER TABLE transport_callbacks ADD COLUMN source TEXT DEFAULT 'voice'",
+        "ALTER TABLE transport_callbacks ADD COLUMN status TEXT DEFAULT 'pending'",
+        "ALTER TABLE transport_callbacks ADD COLUMN transport_request_id INTEGER",
+    ):
+        try:
+            conn.execute(sql)
+        except sqlite3.OperationalError:
+            pass
     conn.commit()
     conn.close()
 
@@ -529,21 +613,52 @@ def dispatch_notification(conn, message, request_id=None):
                 (request_id,)
             ).fetchone()
             if req and req["phone"]:
-                # Send SMS via AT client
-                response = sms_client.send(message, [req["phone"]])
-                print(f"AT SMS Sent successfully to {req['phone']}: {response}")
+                send_sms_direct(req["phone"], message)
         except Exception as e:
             print(f"Error sending SMS via Africa's Talking SDK: {e}")
+
+
+def send_sms_direct(phone, message):
+    """Send SMS to any phone number when Africa's Talking is configured."""
+    if not phone:
+        return False
+    if sms_client:
+        try:
+            response = sms_client.send(message, [phone])
+            print(f"AT SMS sent to {phone}: {response}")
+            return True
+        except Exception as e:
+            print(f"Error sending SMS to {phone}: {e}")
+    else:
+        print(f"[Simulated SMS] To {phone}: {message}")
+    return False
 
 
 @app.get("/api/africas-talking/status")
 def africas_talking_status():
     """Return current Africa's Talking integration mode without exposing secrets."""
+    voice_base = VOICE_BASE_URL or request.url_root.rstrip("/")
     return jsonify({
         "sms_enabled": sms_status["enabled"],
+        "voice_enabled": voice_status["enabled"],
         "username": sms_status["username"],
         "mode": sms_status["mode"],
         "message": sms_status["message"],
+        "voice": {
+            "enabled": voice_status["enabled"],
+            "mode": voice_status["mode"],
+            "message": voice_status["message"],
+            "voice_number": voice_status["voice_number"],
+            "agent_number_configured": bool(AT_AGENT_NUMBER),
+            "base_url": voice_base,
+            "callbacks": {
+                "instructions": f"{voice_base}/voice",
+                "handle": f"{voice_base}/voice/handle",
+                "prices": f"{voice_base}/voice/prices",
+                "storage": f"{voice_base}/voice/storage",
+                "events": f"{voice_base}/voice/events",
+            },
+        },
         "ussd_callback": url_for("api_ussd", _external=True),
     })
 
@@ -815,6 +930,7 @@ def mark_delivered(request_id):
 
 
 init_db()
+apply_db_patches()
 seed_drivers()
 seed_market_prices()
 seed_buyers()
@@ -2548,6 +2664,7 @@ def setup_demo():
     try:
         # ── 1. Clear all seeded tables (order respects FK constraints) ──
         for tbl in [
+            "voice_call_logs", "transport_callbacks",
             "notifications", "tracking", "requests",
             "price_alerts", "buyer_offers", "profit_estimates",
             "trusted_buyers", "market_prices",
@@ -2773,57 +2890,196 @@ def setup_demo():
 
 # ============== IVR VOICE — Africa's Talking (Feature Phones / 2G / No Internet) ==============
 
-def save_transport_callback(phone):
-    """Save caller number for transport callback"""
-    import sqlite3
-    conn = sqlite3.connect(DATABASE)
+def voice_callback_url(path):
+    """Build absolute HTTPS callback URL required by Africa's Talking GetDigits."""
+    base = VOICE_BASE_URL
+    if not base:
+        try:
+            base = request.url_root.rstrip("/")
+        except RuntimeError:
+            base = "http://127.0.0.1:5000"
+    path = path if path.startswith("/") else f"/{path}"
+    return f"{base}{path}"
+
+
+def voice_xml_response(xml_body):
+    """Return VoiceXML with the content type Africa's Talking expects."""
+    return Response(xml_body.strip(), status=200, mimetype="text/plain")
+
+
+def log_voice_event(event_type, session_id=None, caller_number=None, destination_number=None,
+                    dtmf_digits=None, duration_seconds=None, hangup_cause=None):
+    """Persist voice call activity for debugging and analytics."""
+    try:
+        conn = get_db_connection()
+        conn.execute(
+            """INSERT INTO voice_call_logs
+               (session_id, caller_number, destination_number, event_type,
+                dtmf_digits, duration_seconds, hangup_cause, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                session_id,
+                caller_number,
+                destination_number,
+                event_type,
+                dtmf_digits,
+                duration_seconds,
+                hangup_cause,
+                datetime.now().isoformat(timespec="seconds"),
+            ),
+        )
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Voice log error: {e}")
+
+
+def voice_call_context():
+    """Extract standard Africa's Talking POST parameters from the current request."""
+    return {
+        "session_id": request.form.get("sessionId", ""),
+        "caller_number": request.form.get("callerNumber", ""),
+        "destination_number": request.form.get("destinationNumber", ""),
+        "is_active": request.form.get("isActive", "1"),
+        "dtmf_digits": request.form.get("dtmfDigits", ""),
+    }
+
+
+def save_transport_callback(phone, source="voice", transport_request_id=None):
+    """Save caller number for transport callback tracking."""
+    if not phone:
+        return
+    conn = get_db_connection()
     conn.execute(
-        """CREATE TABLE IF NOT EXISTS transport_callbacks (
-           phone TEXT UNIQUE,
-           created_at TEXT)"""
-    )
-    conn.execute(
-        """INSERT OR IGNORE INTO transport_callbacks 
-           (phone, created_at) VALUES (?, datetime('now'))""",
-        (phone,)
+        """INSERT INTO transport_callbacks (phone, source, status, transport_request_id, created_at)
+           VALUES (?, ?, 'pending', ?, ?)
+           ON CONFLICT(phone) DO UPDATE SET
+             source = excluded.source,
+             status = 'pending',
+             transport_request_id = excluded.transport_request_id,
+             created_at = excluded.created_at""",
+        (phone, source, transport_request_id, datetime.now().isoformat(timespec="seconds")),
     )
     conn.commit()
     conn.close()
 
 
+def create_voice_transport_request(phone, session_id=None):
+    """Register a transport request from a voice caller and notify them by SMS."""
+    if not phone:
+        return None
+
+    conn = get_db_connection()
+    farmer_label = f"Voice Farmer ({phone[-4:]})"
+    pickup_date = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO transport_requests
+        (farmer_name, farmer_phone, village, ward, district, crop_type,
+         quantity_bags, pickup_date, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (
+            farmer_label,
+            phone,
+            "Usijulikana",
+            "Voice",
+            "Tanzania",
+            "General",
+            1,
+            pickup_date,
+            "open",
+            datetime.now().isoformat(timespec="seconds"),
+        ),
+    )
+    req_id = cursor.lastrowid
+
+    create_notification(
+        conn,
+        f"Voice transport request #{req_id} from {phone} (session {session_id or 'n/a'}).",
+        None,
+        "info",
+    )
+    conn.commit()
+    conn.close()
+
+    save_transport_callback(phone, source="voice", transport_request_id=req_id)
+
+    sms_message = (
+        f"AgriMove: Ombi lako la usafiri #{req_id} limepokelewa. "
+        "Tutawasiliana ndani ya dakika 10 kukuunganisha na dereva."
+    )
+    send_sms_direct(phone, sms_message)
+    trigger_voice_outbound_callback(phone, session_id)
+
+    log_voice_event(
+        "transport_request_created",
+        session_id=session_id,
+        caller_number=phone,
+    )
+    return req_id
+
+
+def trigger_voice_outbound_callback(phone, session_id=None):
+    """Place an outbound callback call when Voice SDK and number are configured."""
+    if not voice_client or not AT_VOICE_NUMBER or not phone:
+        return False
+    try:
+        response = voice_client.call(callFrom=AT_VOICE_NUMBER, callTo=[phone])
+        print(f"AT outbound voice call to {phone} (session {session_id}): {response}")
+        log_voice_event("outbound_call_initiated", session_id=session_id, caller_number=phone)
+        return True
+    except Exception as e:
+        print(f"Outbound voice call failed for {phone}: {e}")
+        return False
+
+
 def get_price_from_db(crop_key):
-    # Map Swahili crop keys to English
+    """Fetch per-kg crop prices for voice readout."""
     mapping = {
-        'mahindi': 'Maize',
-        'mpunga': 'Rice',
-        'nyanya': 'Tomatoes',
-        'vitunguu': 'Beans'
+        "mahindi": ("Maize", "Mahindi"),
+        "mpunga": ("Rice", "Mpunga"),
+        "nyanya": ("Tomatoes", "Nyanya"),
+        "vitunguu": ("Onions", "Vitunguu"),
     }
-    english_name = mapping.get(crop_key.lower(), 'Maize')
-    
-    prices = {}
+    english_name, swahili_name = mapping.get(crop_key.lower(), ("Maize", "Mahindi"))
+
+    region_keys = {
+        "Dar es Salaam": "kariakoo",
+        "Arusha": "arusha",
+        "Mbeya": "mbeya",
+    }
+    defaults = {
+        "Maize": {"kariakoo": 950, "arusha": 880, "mbeya": 780},
+        "Rice": {"kariakoo": 2000, "arusha": 1850, "mbeya": 1700},
+        "Tomatoes": {"kariakoo": 1500, "arusha": 1300, "mbeya": 1400},
+        "Onions": {"kariakoo": 1800, "arusha": 1600, "mbeya": 1600},
+    }
+    prices = dict(defaults.get(english_name, defaults["Maize"]))
+
     try:
         conn = get_db_connection()
-        for region in ['Dar es Salaam', 'Arusha', 'Mbeya', 'Dodoma']:
+        for region, key in region_keys.items():
             row = conn.execute(
-                "SELECT price FROM market_prices WHERE (LOWER(crop_name) = ? OR LOWER(crop_name_swahili) = ?) AND LOWER(region) = ?",
-                (english_name.lower(), english_name.lower(), region.lower())
+                """
+                SELECT price_per_kg_tzs, price FROM market_prices
+                WHERE (LOWER(crop_name) = ? OR LOWER(crop_name_swahili) = ?)
+                  AND LOWER(region) = ?
+                ORDER BY id DESC LIMIT 1
+                """,
+                (english_name.lower(), swahili_name.lower(), region.lower()),
             ).fetchone()
             if row:
-                prices[region.lower().replace(" ", "")] = int(row['price'] / 100)
+                if row["price_per_kg_tzs"]:
+                    prices[key] = int(row["price_per_kg_tzs"])
+                elif row["price"]:
+                    prices[key] = int(row["price"] / 100)
         conn.close()
     except Exception as e:
         print(f"Error querying price: {e}")
-        
-    if 'daressalaam' in prices:
-        prices['kariakoo'] = prices['daressalaam']
-    if 'kariakoo' not in prices:
-        prices['kariakoo'] = 950 if english_name == 'Maize' else 1500
-    if 'arusha' not in prices:
-        prices['arusha'] = 880 if english_name == 'Maize' else 1400
-    if 'mbeya' not in prices:
-        prices['mbeya'] = 850 if english_name == 'Maize' else 1350
-        
+
     return prices
 
 
@@ -2832,216 +3088,312 @@ def get_storage_from_db(region):
         conn = get_db_connection()
         row = conn.execute(
             "SELECT * FROM storage_facilities WHERE LOWER(region) = ? ORDER BY id DESC LIMIT 1",
-            (region.lower(),)
+            (region.lower(),),
         ).fetchone()
         conn.close()
         if row:
             return {
-                'name': row['name'],
-                'available': row['available_tons'],
-                'cost': row['cost_per_bag_per_month_tzs'],
-                'phone': row['contact_phone']
+                "name": row["name"],
+                "available": row["available_tons"],
+                "cost": row["cost_per_bag_per_month_tzs"],
+                "phone": row["contact_phone"],
             }
     except Exception as e:
         print(f"Error querying storage: {e}")
-        
+
     defaults = {
-        'Mbeya': {
-            'name': 'Ghala la Ushirika Mbeya',
-            'available': 120,
-            'cost': 1500,
-            'phone': '0754 111 222'
+        "Mbeya": {
+            "name": "Ghala la Ushirika Mbeya",
+            "available": 120,
+            "cost": 1500,
+            "phone": "0754 111 222",
         },
-        'Arusha': {
-            'name': 'Arusha Grains Silo',
-            'available': 80,
-            'cost': 1800,
-            'phone': '0784 333 444'
+        "Arusha": {
+            "name": "Arusha Grains Silo",
+            "available": 80,
+            "cost": 1800,
+            "phone": "0784 333 444",
         },
-        'Dar es Salaam': {
-            'name': 'Kurasini Cold Storage',
-            'available': 45,
-            'cost': 2500,
-            'phone': '0715 555 666'
+        "Dar es Salaam": {
+            "name": "Kurasini Cold Storage",
+            "available": 45,
+            "cost": 2500,
+            "phone": "0715 555 666",
         },
-        'Dodoma': {
-            'name': 'Dodoma National Reserve',
-            'available': 300,
-            'cost': 1200,
-            'phone': '0768 777 888'
-        }
+        "Dodoma": {
+            "name": "Dodoma National Reserve",
+            "available": 300,
+            "cost": 1200,
+            "phone": "0768 777 888",
+        },
     }
-    return defaults.get(region, {
-        'name': f'Ghala la Mkoa wa {region}',
-        'available': 50,
-        'cost': 2000,
-        'phone': '0800 000 000'
-    })
+    return defaults.get(
+        region,
+        {
+            "name": f"Ghala la Mkoa wa {region}",
+            "available": 50,
+            "cost": 2000,
+            "phone": "0800 000 000",
+        },
+    )
 
 
-@app.route('/voice', methods=['POST', 'GET'])
+def build_main_menu_xml():
+    handle_url = voice_callback_url("/voice/handle")
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <GetDigits timeout="15" finishOnKey="#" callbackUrl="{handle_url}">
+        <Say voice="woman" playBeep="false">
+            Karibu AgriMove Tanzania.
+            Msaada wa wakulima.
+            Bonyeza moja kwa bei za mazao.
+            Bonyeza mbili kwa kutafuta gari.
+            Bonyeza tatu kwa hifadhi karibu nawe.
+            Bonyeza nne kuzungumza na wakala.
+            Kisha bonyeza gridi.
+        </Say>
+    </GetDigits>
+</Response>"""
+
+
+@app.route("/voice", methods=["POST", "GET"])
 def ivr_handler():
     """
-    Africa's Talking calls this when farmer dials your number.
-    We respond with XML that tells AT what to say and do.
+    Africa's Talking Voice Callback URL — entry point when a farmer calls your number.
+    Returns VoiceXML instructions for the IVR main menu.
     """
-    response = """<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-        <GetDigits timeout="15" 
-                   finishOnKey="#" 
-                   callbackUrl="/voice/handle">
-            <Say voice="woman" playBeep="false">
-                Karibu AgriMove Tanzania. 
-                Msaada wa wakulima.
-                Bonyeza moja kwa bei za mazao.
-                Bonyeza mbili kwa kutafuta gari.
-                Bonyeza tatu kwa hifadhi karibu nawe.
-                Bonyeza nne kuzungumza na wakala.
-                Kisha bonyeza gridi.
-            </Say>
-        </GetDigits>
-    </Response>"""
-    return response, 200, {'Content-Type': 'text/plain'}
-
-
-@app.route('/voice/handle', methods=['POST'])
-def ivr_handle():
-    """Handle farmer's keypad selection"""
-    digits = request.form.get('dtmfDigits', '')
-    caller = request.form.get('callerNumber', '')
-    
-    if digits == '1':
-        response = """<?xml version="1.0" encoding="UTF-8"?>
-        <Response>
-            <GetDigits timeout="10" 
-                       finishOnKey="#"
-                       callbackUrl="/voice/prices">
-                <Say voice="woman">
-                    Bei za mazao leo.
-                    Bonyeza moja kwa mahindi.
-                    Bonyeza mbili kwa mpunga.
-                    Bonyeza tatu kwa nyanya.
-                    Bonyeza nne kwa vitunguu.
-                    Kisha bonyeza gridi.
-                </Say>
-            </GetDigits>
-        </Response>"""
-    
-    elif digits == '2':
-        response = """<?xml version="1.0" encoding="UTF-8"?>
-        <Response>
-            <Say voice="woman">
-                Huduma ya kutafuta gari.
-                Tutakupigia simu ndani ya dakika kumi
-                kukuunganisha na gari karibu nawe.
-                Nambari yako imehifadhiwa.
-                Asante kwa kutumia AgriMove Tanzania.
-            </Say>
-        </Response>"""
-        save_transport_callback(caller)
-    
-    elif digits == '3':
-        response = """<?xml version="1.0" encoding="UTF-8"?>
-        <Response>
-            <GetDigits timeout="10"
-                       finishOnKey="#"
-                       callbackUrl="/voice/storage">
-                <Say voice="woman">
-                    Hifadhi karibu nawe.
-                    Bonyeza moja kwa Mbeya.
-                    Bonyeza mbili kwa Arusha.
-                    Bonyeza tatu kwa Dar es Salaam.
-                    Bonyeza nne kwa Dodoma.
-                    Kisha bonyeza gridi.
-                </Say>
-            </GetDigits>
-        </Response>"""
-    
-    elif digits == '4':
-        response = """<?xml version="1.0" encoding="UTF-8"?>
-        <Response>
-            <Say voice="woman">
-                Tunakupeleka kwa wakala wetu.
-                Subiri kidogo tafadhali.
-            </Say>
-            <Dial record="false">
-                <Number>+255XXXXXXXXX</Number>
-            </Dial>
-        </Response>"""
-    
-    else:
-        response = """<?xml version="1.0" encoding="UTF-8"?>
-        <Response>
-            <Redirect>/voice</Redirect>
-        </Response>"""
-    
-    return response, 200, {'Content-Type': 'text/plain'}
-
-
-@app.route('/voice/prices', methods=['POST'])
-def ivr_prices():
-    """Speak crop price when farmer selects crop"""
-    digits = request.form.get('dtmfDigits', '')
-    
-    crops = {
-        '1': ('Mahindi', 'mahindi'),
-        '2': ('Mpunga', 'mpunga'),
-        '3': ('Nyanya', 'nyanya'),
-        '4': ('Vitunguu', 'vitunguu')
-    }
-    
-    crop_display, crop_key = crops.get(
-        digits, ('Mahindi', 'mahindi')
+    ctx = voice_call_context()
+    log_voice_event(
+        "call_started" if ctx["is_active"] == "1" else "call_inactive",
+        session_id=ctx["session_id"],
+        caller_number=ctx["caller_number"],
+        destination_number=ctx["destination_number"],
+        dtmf_digits=ctx["dtmf_digits"],
     )
-    
+
+    if ctx["is_active"] != "1":
+        return voice_xml_response("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>")
+
+    print(
+        f"[Voice] session={ctx['session_id']} caller={ctx['caller_number']} "
+        f"dest={ctx['destination_number']}"
+    )
+    return voice_xml_response(build_main_menu_xml())
+
+
+@app.route("/voice/handle", methods=["POST"])
+def ivr_handle():
+    """Handle farmer's main menu keypad selection."""
+    ctx = voice_call_context()
+    digits = ctx["dtmf_digits"]
+    caller = ctx["caller_number"]
+
+    log_voice_event(
+        "menu_selection",
+        session_id=ctx["session_id"],
+        caller_number=caller,
+        destination_number=ctx["destination_number"],
+        dtmf_digits=digits,
+    )
+    print(f"[Voice] menu choice={digits!r} caller={caller} session={ctx['session_id']}")
+
+    if digits == "1":
+        prices_url = voice_callback_url("/voice/prices")
+        response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <GetDigits timeout="10" finishOnKey="#" callbackUrl="{prices_url}">
+        <Say voice="woman">
+            Bei za mazao leo.
+            Bonyeza moja kwa mahindi.
+            Bonyeza mbili kwa mpunga.
+            Bonyeza tatu kwa nyanya.
+            Bonyeza nne kwa vitunguu.
+            Kisha bonyeza gridi.
+        </Say>
+    </GetDigits>
+</Response>"""
+
+    elif digits == "2":
+        req_id = create_voice_transport_request(caller, ctx["session_id"])
+        req_note = f" Nambari ya ombi ni {req_id}." if req_id else ""
+        response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="woman">
+        Huduma ya kutafuta gari.
+        Ombi lako limepokelewa.{req_note}
+        Tutakupigia simu au tutakutumia ujumbe mfupi ndani ya dakika kumi.
+        Nambari yako imehifadhiwa.
+        Asante kwa kutumia AgriMove Tanzania.
+    </Say>
+</Response>"""
+
+    elif digits == "3":
+        storage_url = voice_callback_url("/voice/storage")
+        response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <GetDigits timeout="10" finishOnKey="#" callbackUrl="{storage_url}">
+        <Say voice="woman">
+            Hifadhi karibu nawe.
+            Bonyeza moja kwa Mbeya.
+            Bonyeza mbili kwa Arusha.
+            Bonyeza tatu kwa Dar es Salaam.
+            Bonyeza nne kwa Dodoma.
+            Kisha bonyeza gridi.
+        </Say>
+    </GetDigits>
+</Response>"""
+
+    elif digits == "4":
+        if AT_AGENT_NUMBER:
+            response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="woman">
+        Tunakupeleka kwa wakala wetu.
+        Subiri kidogo tafadhali.
+    </Say>
+    <Dial record="false">
+        <Number>{AT_AGENT_NUMBER}</Number>
+    </Dial>
+</Response>"""
+        else:
+            response = """<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Say voice="woman">
+        Samahani, wakala wetu haupo sasa.
+        Tafadhali piga tena baadaye au bonyeza mbili kuomba usafiri.
+        Asante kwa kutumia AgriMove Tanzania.
+    </Say>
+</Response>"""
+
+    else:
+        redirect_url = voice_callback_url("/voice")
+        response = f"""<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+    <Redirect>{redirect_url}</Redirect>
+</Response>"""
+
+    return voice_xml_response(response)
+
+
+@app.route("/voice/prices", methods=["POST"])
+def ivr_prices():
+    """Speak crop prices when farmer selects a crop."""
+    ctx = voice_call_context()
+    digits = ctx["dtmf_digits"]
+
+    crops = {
+        "1": ("Mahindi", "mahindi"),
+        "2": ("Mpunga", "mpunga"),
+        "3": ("Nyanya", "nyanya"),
+        "4": ("Vitunguu", "vitunguu"),
+    }
+    crop_display, crop_key = crops.get(digits, ("Mahindi", "mahindi"))
     price = get_price_from_db(crop_key)
-    
+
+    log_voice_event(
+        "price_lookup",
+        session_id=ctx["session_id"],
+        caller_number=ctx["caller_number"],
+        dtmf_digits=digits,
+    )
+
     price_text = f"""Bei ya {crop_display} leo.
-        Kariakoo Dar es Salaam, 
+        Kariakoo Dar es Salaam,
         shilingi {price.get('kariakoo', 600)} kwa kilo.
-        Soko la Arusha, 
+        Soko la Arusha,
         shilingi {price.get('arusha', 550)} kwa kilo.
-        Soko la Mbeya, 
+        Soko la Mbeya,
         shilingi {price.get('mbeya', 500)} kwa kilo.
         Asante kwa kutumia AgriMove Tanzania.
         Piga tena kupata bei nyingine."""
-    
+
+    redirect_url = voice_callback_url("/voice")
     response = f"""<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-        <Say voice="woman">{price_text}</Say>
-        <Redirect>/voice</Redirect>
-    </Response>"""
-    
-    return response, 200, {'Content-Type': 'text/plain'}
+<Response>
+    <Say voice="woman">{price_text}</Say>
+    <Redirect>{redirect_url}</Redirect>
+</Response>"""
+    return voice_xml_response(response)
 
 
-@app.route('/voice/storage', methods=['POST'])
+@app.route("/voice/storage", methods=["POST"])
 def ivr_storage():
-    """Speak storage info for selected region"""
-    digits = request.form.get('dtmfDigits', '')
-    
+    """Speak storage facility info for the selected region."""
+    ctx = voice_call_context()
+    digits = ctx["dtmf_digits"]
+
     regions = {
-        '1': 'Mbeya', '2': 'Arusha',
-        '3': 'Dar es Salaam', '4': 'Dodoma'
+        "1": "Mbeya",
+        "2": "Arusha",
+        "3": "Dar es Salaam",
+        "4": "Dodoma",
     }
-    region = regions.get(digits, 'Mbeya')
+    region = regions.get(digits, "Mbeya")
     storage = get_storage_from_db(region)
-    
+
+    log_voice_event(
+        "storage_lookup",
+        session_id=ctx["session_id"],
+        caller_number=ctx["caller_number"],
+        dtmf_digits=digits,
+    )
+
     text = f"""Hifadhi katika {region}.
         Jina: {storage.get('name', 'Ghala la Mkoa')}.
-        Nafasi iliyobaki: 
+        Nafasi iliyobaki:
         tani {storage.get('available', 50)}.
-        Bei: shilingi 
+        Bei: shilingi
         {storage.get('cost', 2000)} kwa gunia kwa mwezi.
         Piga simu: {storage.get('phone', '0800 000 000')}.
         Asante. Tutaonana tena."""
-    
+
+    redirect_url = voice_callback_url("/voice")
     response = f"""<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-        <Say voice="woman">{text}</Say>
-    </Response>"""
-    
-    return response, 200, {'Content-Type': 'text/plain'}
+<Response>
+    <Say voice="woman">{text}</Say>
+    <Redirect>{redirect_url}</Redirect>
+</Response>"""
+    return voice_xml_response(response)
+
+
+@app.route("/voice/events", methods=["POST"])
+def ivr_events():
+    """
+    Africa's Talking Voice Event Notification URL.
+    Receives call lifecycle events (answered, completed, etc.).
+    """
+    session_id = request.form.get("sessionId", "")
+    event_type = request.form.get("eventType", request.form.get("status", "unknown"))
+    caller_number = request.form.get("callerNumber", "")
+    destination_number = request.form.get("destinationNumber", "")
+    hangup_cause = request.form.get("hangupCause", "")
+    duration_raw = request.form.get("durationInSeconds", request.form.get("duration", ""))
+    duration_seconds = int(duration_raw) if str(duration_raw).isdigit() else None
+
+    log_voice_event(
+        event_type,
+        session_id=session_id,
+        caller_number=caller_number,
+        destination_number=destination_number,
+        duration_seconds=duration_seconds,
+        hangup_cause=hangup_cause,
+    )
+    print(
+        f"[Voice Event] {event_type} session={session_id} caller={caller_number} "
+        f"duration={duration_seconds}s cause={hangup_cause}"
+    )
+    return voice_xml_response("<?xml version=\"1.0\" encoding=\"UTF-8\"?><Response></Response>")
+
+
+@app.get("/api/voice/logs")
+def api_voice_logs():
+    """Return recent voice call logs for debugging (last 50)."""
+    conn = get_db_connection()
+    rows = conn.execute(
+        "SELECT * FROM voice_call_logs ORDER BY id DESC LIMIT 50"
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(row) for row in rows])
 
 
 if __name__ == "__main__":
