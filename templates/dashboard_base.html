@@ -59,7 +59,7 @@
             <p>{{ subheading }}</p>
           </div>
           <div style="display: flex; gap: 12px; align-items: center;">
-            <button id="themeToggleBtn" class="btn btn-ghost" style="padding: 8px 16px; border-radius: 8px; font-size: 0.9rem; cursor: pointer;">🌓 Mode</button>
+            <button id="themeToggleBtn" type="button" class="btn btn-ghost theme-toggle-btn" data-theme-toggle aria-pressed="false" aria-label="Mode ya giza" title="Mode ya giza">🌙</button>
             <button class="sidebar-toggle" type="button">Menu</button>
           </div>
         </header>
@@ -81,21 +81,5 @@
     </div>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <script>
-      // Header theme toggle button event wireup
-      const themeBtn = document.getElementById("themeToggleBtn");
-      if (themeBtn) {
-        themeBtn.addEventListener("click", () => {
-          document.body.classList.toggle("dark-mode");
-          const isDark = document.body.classList.contains("dark-mode");
-          localStorage.setItem("darkMode", isDark);
-          // Also sync Admin Dashboard page button if it exists
-          const adminModeToggle = document.getElementById("darkModeToggle");
-          if (adminModeToggle) {
-            adminModeToggle.textContent = isDark ? "☀️ Light Mode" : "🌙 Dark Mode";
-          }
-        });
-      }
-    </script>
 </body>
 </html>

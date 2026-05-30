@@ -3,3 +3,6 @@ __pycache__/
 *.pyc
 static/audio/
 *.mp3
+database.db
+.venv/
+venv/
