@@ -334,5 +334,32 @@
   .rec-title div { display: flex; flex-direction: column; }
   .rec-title small { color: var(--muted); font-size: 0.75rem; }
   .rec-benefit { font-size: 0.85rem; color: var(--text); }
+
+  body.dark-mode .badge-ai-model {
+    background: rgba(255, 255, 255, 0.08);
+  }
+  body.dark-mode .market-row-item,
+  body.dark-mode .projection-item,
+  body.dark-mode .hotspot-tile {
+    border-color: var(--border);
+  }
+  body.dark-mode .trend-rising,
+  body.dark-mode .pct-badge.positive {
+    background: rgba(47, 125, 50, 0.22);
+    color: #b8e0bc;
+  }
+  body.dark-mode .trend-falling,
+  body.dark-mode .pct-badge.negative {
+    background: rgba(197, 34, 31, 0.2);
+    color: #f5b5ad;
+  }
+  body.dark-mode .trend-stable,
+  body.dark-mode .pct-badge.stable {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--muted);
+  }
+  body.dark-mode .rec-card-item {
+    background: rgba(242, 193, 78, 0.12);
+  }
 </style>
 {% endblock %}

@@ -92,12 +92,15 @@
 </div>
 
 <style>
-    /* High contrast enhancement for outdoor viewing */
     .crop-price-card {
         border-color: #2f7d32 !important;
     }
     body.dark-mode .crop-price-card {
-        border-color: #f2c14e !important;
+        border-color: rgba(242, 193, 78, 0.45) !important;
+        box-shadow: var(--shadow) !important;
+    }
+    body.dark-mode .crop-price-card:hover {
+        box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4) !important;
     }
     .crop-price-card:hover {
         transform: translateY(-4px);

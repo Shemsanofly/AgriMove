@@ -9,9 +9,13 @@
   --text: #1d2b22;
   --muted: #56645c;
   --white: #ffffff;
+  --on-primary: #ffffff;
   --shadow: 0 18px 45px rgba(15, 31, 22, 0.12);
   --bg-light: #f7faf8;
   --card-bg: #ffffff;
+  --surface: #ffffff;
+  --border: rgba(15, 31, 22, 0.12);
+  --header-bg: linear-gradient(120deg, #f8fff7 0%, #eef6f0 50%, #ffffff 100%);
 }
 
 /* ============== MARKET INTELLIGENCE STYLES ============== */
@@ -69,12 +73,19 @@
 }
 
 body.dark-mode {
-  --text: #e1ebe3;
-  --muted: #b7c6bc;
+  color-scheme: dark;
+  --text: #e8f0ea;
+  --muted: #a8b8ae;
   --dark: #f0f5f1;
-  --white: #1a2722;
-  --card-bg: #233233;
-  --bg-light: #0f1a14;
+  --white: #ffffff;
+  --on-primary: #ffffff;
+  --green-light: rgba(47, 125, 50, 0.2);
+  --card-bg: #1e2d28;
+  --surface: #243530;
+  --bg-light: #121c18;
+  --border: rgba(255, 255, 255, 0.1);
+  --shadow: 0 18px 45px rgba(0, 0, 0, 0.45);
+  --header-bg: linear-gradient(120deg, #121c18 0%, #1a2722 55%, #152019 100%);
 }
 
 
@@ -113,9 +124,10 @@ html {
 
 .header {
   position: relative;
-  background: linear-gradient(120deg, #f8fff7 0%, #eef6f0 50%, #ffffff 100%);
+  background: var(--header-bg);
   padding-top: 90px;
   overflow: hidden;
+  transition: background 0.3s ease;
 }
 
 .header::before,
@@ -262,7 +274,7 @@ html {
 
 .btn-primary {
   background: var(--green);
-  color: var(--white);
+  color: var(--on-primary);
 }
 
 .btn-outline {
@@ -284,11 +296,12 @@ html {
 }
 
 .stat {
-  background: var(--white);
+  background: var(--card-bg);
   padding: 16px 18px;
   border-radius: 16px;
   box-shadow: var(--shadow);
   min-width: 140px;
+  border: 1px solid var(--border);
 }
 
 .stat h3 {
@@ -307,10 +320,11 @@ html {
 }
 
 .map-card {
-  background: var(--white);
+  background: var(--card-bg);
   padding: 20px;
   border-radius: 20px;
   box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 .map-header span {
@@ -390,10 +404,11 @@ html {
 }
 
 .metric-card {
-  background: var(--white);
+  background: var(--card-bg);
   padding: 18px 20px;
   border-radius: 18px;
   box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 .metric-card h4 {
@@ -434,7 +449,7 @@ html {
 }
 
 .features {
-  background: var(--white);
+  background: var(--surface);
 }
 
 .features-grid {
@@ -466,7 +481,7 @@ html {
 }
 
 .about {
-  background: #f3f7f4;
+  background: var(--bg-light);
 }
 
 .about-grid {
@@ -494,11 +509,11 @@ html {
 
 .about-tags span {
   padding: 8px 14px;
-  background: var(--white);
+  background: var(--card-bg);
   border-radius: 999px;
   font-size: 0.85rem;
   color: var(--green-dark);
-  border: 1px solid rgba(47, 125, 50, 0.15);
+  border: 1px solid var(--border);
 }
 
 .about-cards {
@@ -507,10 +522,11 @@ html {
 }
 
 .about-card {
-  background: var(--white);
+  background: var(--card-bg);
   padding: 20px;
   border-radius: 16px;
   box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 .about-card h3 {
@@ -523,7 +539,7 @@ html {
 }
 
 .contact {
-  background: var(--white);
+  background: var(--surface);
 }
 
 .contact-grid {
@@ -563,10 +579,11 @@ html {
 }
 
 .contact-form {
-  background: #f5faf6;
+  background: var(--card-bg);
   padding: 24px;
   border-radius: 20px;
   box-shadow: var(--shadow);
+  border: 1px solid var(--border);
 }
 
 .form-row {
@@ -588,12 +605,15 @@ label {
 }
 
 input,
-textarea {
+textarea,
+select {
   border-radius: 12px;
-  border: 1px solid rgba(15, 31, 22, 0.15);
+  border: 1px solid var(--border);
   padding: 12px 14px;
   font-size: 0.95rem;
   font-family: inherit;
+  background: var(--card-bg);
+  color: var(--text);
 }
 
 input:focus,
@@ -733,7 +753,7 @@ textarea:focus {
 }
 
 .dashboard-body {
-  background: #f4f8f5;
+  background: var(--bg-light);
 }
 
 .dashboard-layout {
@@ -822,8 +842,9 @@ textarea:focus {
 
 .sidebar-toggle {
   display: none;
-  border: 1px solid rgba(15, 31, 22, 0.15);
-  background: var(--white);
+  border: 1px solid var(--border);
+  background: var(--card-bg);
+  color: var(--text);
   padding: 8px 16px;
   border-radius: 999px;
   font-weight: 600;
@@ -884,7 +905,7 @@ textarea:focus {
 }
 
 .notification-panel {
-  background: #f7fbf8;
+  background: var(--bg-light);
 }
 
 .notification-list {
@@ -894,10 +915,10 @@ textarea:focus {
 }
 
 .notification-card {
-  background: var(--white);
+  background: var(--card-bg);
   border-radius: 12px;
   padding: 12px 14px;
-  border: 1px solid rgba(47, 125, 50, 0.12);
+  border: 1px solid var(--border);
 }
 
 .notification-card p {
@@ -945,7 +966,7 @@ textarea:focus {
 }
 
 .data-table thead {
-  background: #f2f7f3;
+  background: var(--green-light);
   color: var(--dark);
 }
 
@@ -1077,39 +1098,201 @@ textarea:focus {
 /* ============== DARK MODE ENHANCEMENTS ============== */
 
 body.dark-mode .navbar {
-  background: rgba(35, 50, 51, 0.9);
-  border-bottom-color: rgba(255, 255, 255, 0.08);
+  background: rgba(18, 28, 24, 0.92);
+  border-bottom-color: var(--border);
+}
+
+body.dark-mode .navbar.scrolled {
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
 body.dark-mode .logo {
-  color: #e1ebe3;
+  color: var(--dark);
+}
+
+body.dark-mode .nav-links a {
+  color: var(--text);
+}
+
+body.dark-mode .nav-links {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+}
+
+body.dark-mode .nav-toggle span {
+  background: var(--dark);
+}
+
+body.dark-mode .header::before,
+body.dark-mode .header::after {
+  opacity: 0.35;
+}
+
+body.dark-mode .map-body {
+  background: linear-gradient(135deg, rgba(47, 125, 50, 0.15), rgba(242, 193, 78, 0.08));
+}
+
+body.dark-mode .point {
+  border-color: var(--card-bg);
+}
+
+body.dark-mode .about {
+  background: var(--bg-light);
+}
+
+body.dark-mode .contact-form {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+}
+
+body.dark-mode .feature-card {
+  background: var(--green-light);
+  border-color: rgba(47, 125, 50, 0.25);
+}
+
+body.dark-mode .about-tags span {
+  color: #b8e0bc;
+}
+
+body.dark-mode .market-link {
+  background: linear-gradient(135deg, rgba(47, 125, 50, 0.18), rgba(242, 193, 78, 0.08));
+  border-color: var(--border);
+}
+
+body.dark-mode .market-link:hover {
+  color: var(--on-primary);
+}
+
+body.dark-mode .btn-ghost {
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border);
+}
+
+body.dark-mode .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+body.dark-mode .btn-outline {
+  color: #b8e0bc;
+  border-color: rgba(47, 125, 50, 0.6);
 }
 
 body.dark-mode .sidebar {
-  background: #1a2722;
+  background: #0d1612;
 }
 
 body.dark-mode .card {
-  background: #233233;
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+body.dark-mode .ai-card {
+  background: linear-gradient(135deg, rgba(47, 125, 50, 0.22), rgba(242, 193, 78, 0.12));
+}
+
+body.dark-mode .table-header {
+  border-bottom-color: var(--border);
 }
 
 body.dark-mode .data-table thead {
-  background: rgba(255, 255, 255, 0.08);
-  color: #e1ebe3;
+  background: rgba(47, 125, 50, 0.15);
+  color: var(--dark);
+}
+
+body.dark-mode .data-table tbody tr {
+  border-bottom-color: var(--border);
 }
 
 body.dark-mode .data-table tbody tr:hover {
-  background: rgba(47, 125, 50, 0.15);
+  background: rgba(47, 125, 50, 0.12);
 }
 
 body.dark-mode .notification-card {
-  background: #1a2722;
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--surface);
+  border-color: var(--border);
+}
+
+body.dark-mode .notification-panel {
+  background: transparent;
 }
 
 body.dark-mode .status-badge {
-  opacity: 0.9;
+  opacity: 0.95;
+}
+
+body.dark-mode .status-pending {
+  background: rgba(242, 193, 78, 0.2);
+  color: #f5d78a;
+}
+
+body.dark-mode .status-accepted,
+body.dark-mode .status-available {
+  background: rgba(47, 125, 50, 0.25);
+  color: #b8e0bc;
+}
+
+body.dark-mode .status-in-transit {
+  background: rgba(40, 81, 163, 0.25);
+  color: #9ec5f5;
+}
+
+body.dark-mode .status-delivered {
+  background: rgba(31, 92, 36, 0.35);
+  color: #c8f0cc;
+}
+
+body.dark-mode .status-busy {
+  background: rgba(163, 58, 44, 0.25);
+  color: #f5b5ad;
+}
+
+body.dark-mode .flash-card {
+  background: rgba(47, 125, 50, 0.2);
+  color: #b8e0bc;
+  border: 1px solid rgba(47, 125, 50, 0.35);
+}
+
+body.dark-mode .step-guide {
+  background: var(--surface);
+  border-left-color: var(--green);
+}
+
+body.dark-mode .technical-notes {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+body.dark-mode .crop-price-card,
+body.dark-mode .storage-card {
+  border-color: rgba(47, 125, 50, 0.35) !important;
+}
+
+body.dark-mode .crop-price-card [style*="rgba(0,0,0,0.02)"],
+body.dark-mode .crop-price-card [style*="rgba(0,0,0,0.06)"] {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
+body.dark-mode #offline-alert {
+  background: rgba(242, 193, 78, 0.15) !important;
+  color: #f5d78a !important;
+  border-left-color: var(--gold) !important;
+}
+
+body.dark-mode .distance-badge,
+body.dark-mode [style*="background: #fff3cd"] {
+  background: rgba(242, 193, 78, 0.2) !important;
+  color: #f5d78a !important;
+}
+
+body.dark-mode [style*="background: #e6f4ea"]:not(.btn-primary) {
+  background: rgba(47, 125, 50, 0.18) !important;
+  border-color: rgba(47, 125, 50, 0.35) !important;
+}
+
+body.dark-mode option {
+  background: var(--card-bg);
+  color: var(--text);
 }
 
 /* ============== ADVANCED UI COMPONENTS ============== */
@@ -1734,14 +1917,14 @@ body.dark-mode .progress-bar {
 
 body.dark-mode .admin-tab-btn.active {
   background: rgba(255, 255, 255, 0.06);
-  color: var(--white);
-  border-bottom-color: var(--white);
+  color: var(--dark);
+  border-bottom-color: var(--gold);
 }
 body.dark-mode .admin-tab-btn {
   color: var(--muted);
 }
 body.dark-mode .admin-tab-btn:hover {
-  color: var(--white);
+  color: var(--dark);
   background: rgba(255, 255, 255, 0.04);
 }
 body.dark-mode .admin-tabs {
@@ -1779,4 +1962,20 @@ body.dark-mode .sms-sender {
 }
 body.dark-mode .sms-empty {
   color: #999;
+}
+
+/* Theme toggle — consistent look */
+.theme-toggle-btn {
+  padding: 8px 11px;
+  min-width: 42px;
+  border-radius: 999px;
+  font-size: 1.15rem;
+  line-height: 1;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+body.dark-mode .theme-toggle-btn {
+  border-color: rgba(242, 193, 78, 0.35);
 }

@@ -1,3 +1,39 @@
+/* Dark / light theme (saved in localStorage) */
+function isDarkModeEnabled() {
+  return localStorage.getItem("darkMode") === "true";
+}
+
+function updateThemeToggleLabels(isDark) {
+  const icon = isDark ? "☀️" : "🌙";
+  document.querySelectorAll("[data-theme-toggle]").forEach((btn) => {
+    btn.textContent = icon;
+    btn.setAttribute("aria-pressed", String(isDark));
+    btn.setAttribute("aria-label", isDark ? "Mode ya mwanga" : "Mode ya giza");
+    btn.setAttribute("title", isDark ? "Mode ya mwanga" : "Mode ya giza");
+  });
+}
+
+function applyTheme(isDark) {
+  document.body.classList.toggle("dark-mode", isDark);
+  localStorage.setItem("darkMode", isDark);
+  updateThemeToggleLabels(isDark);
+}
+
+function toggleTheme() {
+  applyTheme(!document.body.classList.contains("dark-mode"));
+}
+
+if (isDarkModeEnabled()) {
+  document.body.classList.add("dark-mode");
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  updateThemeToggleLabels(document.body.classList.contains("dark-mode"));
+  document.querySelectorAll("[data-theme-toggle]").forEach((btn) => {
+    btn.addEventListener("click", toggleTheme);
+  });
+});
+
 const navToggle = document.querySelector(".nav-toggle");
 const navLinks = document.querySelector(".nav-links");
 const navbar = document.querySelector(".navbar");

@@ -7,6 +7,11 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
   </head>
   <body>
+    <script>
+      if (localStorage.getItem("darkMode") === "true") {
+        document.body.classList.add("dark-mode");
+      }
+    </script>
     <header class="header" id="home">
       <nav class="navbar">
         <div class="container nav-content">
@@ -23,6 +28,7 @@
             <a href="/storage" data-en="Hifadhi Yangu" data-sw="Hifadhi Yangu">Hifadhi Yangu</a>
             <a href="/ussd-simulator" data-en="USSD Demo" data-sw="USSD Demo">USSD Demo</a>
             <a href="{{ url_for('farmer_dashboard') }}" data-en="Dashboard" data-sw="Dashibodi">Dashboard</a>
+            <button type="button" class="btn btn-ghost theme-toggle-btn" data-theme-toggle aria-pressed="false" aria-label="Mode ya giza" title="Mode ya giza">🌙</button>
             <button id="langToggleBtn" class="btn btn-ghost" style="padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: 1.5px solid var(--green); margin-left: 8px;">🇹🇿 SW</button>
           </div>
         </div>
