@@ -1,177 +1,232 @@
 {% extends "dashboard_base.html" %}
 
 {% block content %}
-<div class="container" style="max-width: 1100px; padding: 20px 0;">
-    <!-- GPS Banner -->
-    <div id="gps-banner" style="background: rgba(47,125,50,0.08); border: 1px dashed var(--green); border-radius: 12px; padding: 14px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-        <span style="font-size: 0.9rem; color: var(--green-dark); font-weight: 600;">
-            📍 Ruhusu GPS kwenye kivinjari chako ili kupata ghala za karibu na kuhesabu umbali.
-        </span>
-        <button onclick="requestGPS()" class="btn btn-outline" style="border-radius: 20px; padding: 6px 14px; font-size: 0.8rem; cursor: pointer; font-weight: 700;">
-            Mruhusu Sasa
+<div class="container" style="max-width: 1400px; padding: 20px 0;">
+    <!-- GPS Status Banner -->
+    <div id="gps-banner" style="background: linear-gradient(135deg, rgba(47,125,50,0.12), rgba(47,125,50,0.05)); border: 2px solid var(--green); border-radius: 16px; padding: 18px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+        <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 2rem;">📍</span>
+            <div>
+                <span style="font-size: 0.95rem; color: var(--green-dark); font-weight: 700; display: block;">Huduma ya GPS Imewashwa</span>
+                <span id="gps-status-text" style="font-size: 0.8rem; color: var(--muted);">Ruhusu GPS kupata ghala za karibu na kuhesabu umbali halisi</span>
+            </div>
+        </div>
+        <button onclick="requestGPS()" id="gps-activate-btn" class="btn btn-primary" style="border-radius: 30px; padding: 10px 24px; font-size: 0.9rem; font-weight: 700; cursor: pointer; background: var(--green); color: white; border: none;">
+            🔍 Washa GPS & Pata Karibu Zaidi
         </button>
     </div>
 
-    <!-- Filter Actions -->
-    <div style="margin-bottom: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
-        <div>
-            <label style="font-weight: 700; font-size: 0.85rem; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 6px;">Chuja kwa Mkoa:</label>
-            <select id="regionSelect" onchange="filterRegion()" style="width: 100%; border: 2px solid var(--green); border-radius: 12px; padding: 14px; font-size: 1.1rem; font-weight: 600; background: var(--card-bg); color: var(--text); cursor: pointer;">
-                <option value="">Mikoa Yote</option>
-                {% for r in regions %}
-                    <option value="{{ r }}">{{ r }}</option>
-                {% endfor %}
-            </select>
-        </div>
-        <div>
-            <label style="font-weight: 700; font-size: 0.85rem; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 6px;">Tafuta jina la ghala:</label>
-            <input type="text" id="storageSearch" placeholder="Andika hapa kutafuta..." oninput="filterRegion()" style="width: 100%; border: 2px solid var(--green); border-radius: 12px; padding: 14px; font-size: 1.1rem; font-weight: 600; background: var(--card-bg); color: var(--text);">
-        </div>
-    </div>
-
-    <!-- Card Grid -->
-    <div id="storage-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px;">
-        {% if facilities %}
-            {% for g in facilities %}
-                <div class="storage-card" data-region="{{ g.region | lower }}" data-name="{{ g.name | lower }}" style="background: var(--card-bg); border: 2px solid rgba(47, 125, 50, 0.15); border-radius: 16px; padding: 22px; box-shadow: var(--shadow); position: relative; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
-                    <div>
-                        <!-- Region & WRS badge header -->
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px;">
-                            <span style="font-weight: 700; color: var(--green); font-size: 0.8rem; text-transform: uppercase;">📍 {{ g.region }}</span>
-                            {% if g.accepts_wrs == 1 %}
-                                <span style="background: linear-gradient(135deg, var(--green), var(--green-dark)); color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;">WRS KIKAMILIFU</span>
-                            {% endif %}
-                        </div>
-
-                        <!-- Distance placeholder -->
-                        <div class="distance-badge" id="distance-{{ g.id }}" style="display: none; background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; margin-bottom: 12px;"></div>
-
-                        <!-- Facility Name -->
-                        <h3 style="color: var(--dark); font-size: 1.25rem; font-weight: 700; margin: 0 0 4px 0;">{{ g.name }}</h3>
-                        <div style="font-size: 0.85rem; color: var(--muted); font-weight: 600; margin-bottom: 16px;">
-                            Kijiji: {{ g.village }} | Wilaya: {{ g.district }}
-                        </div>
-
-                        <!-- Capacity calculations -->
-                        {% set used = g.capacity_tons - g.available_tons %}
-                        {% set pct = (used / g.capacity_tons * 100) | int %}
-                        <div style="margin-bottom: 20px;">
-                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); font-weight: 600; margin-bottom: 6px;">
-                                <span>Uwezo uliotumika:</span>
-                                <strong>{{ used | int }} / {{ g.capacity_tons | int }} Tani ({{ pct }}%)</strong>
-                            </div>
-                            
-                            <!-- Capacity progress bar -->
-                            <div style="height: 10px; background: rgba(0,0,0,0.05); border-radius: 99px; overflow: hidden;">
-                                <div style="width: {{ pct }}%; height: 100%; background: {% if pct > 85 %}#c62828{% elif pct > 60 %}#ffb300{% else %}#2e7d32{% endif %}; border-radius: 99px;"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Cost + Call action footer -->
-                    <div style="border-top: 1px dashed rgba(0,0,0,0.08); padding-top: 14px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <small style="color: var(--muted); display: block; font-size: 0.75rem; text-transform: uppercase; font-weight: 700;">Gharama ya Hifadhi:</small>
-                            <span style="font-size: 1.1rem; font-weight: 800; color: var(--green);">TSh {{ "{:,.0f}".format(g.cost_per_bag_per_month_tzs) }}</span>
-                            <small style="color: var(--muted); font-size: 0.75rem;">/ mfuko / mwezi</small>
-                        </div>
-                        <a href="tel:{{ g.contact_phone }}" class="btn btn-outline" style="border-radius: 30px; padding: 8px 16px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 6px; border-color: var(--green); color: var(--green);">
-                            📞 Piga Simu
-                        </a>
-                    </div>
-                </div>
-            {% endfor %}
-        {% else %}
-            <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: var(--card-bg); border-radius: 12px;">
-                <p style="font-size: 1.2rem; color: var(--muted);">Hakuna maghala yaliyopatikana.</p>
+    <div style="display: grid; grid-template-columns: 320px 1fr; gap: 24px;">
+        <!-- Sidebar Filters -->
+        <div style="background: var(--card-bg); border-radius: 20px; padding: 20px; box-shadow: var(--shadow); border: 1px solid rgba(47,125,50,0.15); height: fit-content; position: sticky; top: 20px;">
+            
+            <!-- Region Dropdown -->
+            <div style="margin-bottom: 25px;">
+                <label style="font-weight: 700; font-size: 0.85rem; color: var(--green); text-transform: uppercase; display: block; margin-bottom: 10px;">
+                    📍 Chagua Mkoa
+                </label>
+                <select id="regionSelect" onchange="filterByRegion()" style="width: 100%; border: 2px solid var(--green); border-radius: 12px; padding: 12px; font-size: 1rem; font-weight: 500; background: var(--bg); color: var(--text); cursor: pointer;">
+                    <option value="">🌍 Mikoa Yote ({{ regions|length }}+)</option>
+                    {% set tz_regions = [
+                        'Arusha', 'Dar es Salaam', 'Dodoma', 'Geita', 'Iringa', 'Kagera', 
+                        'Katavi', 'Kigoma', 'Kilimanjaro', 'Lindi', 'Manyara', 'Mara', 
+                        'Mbeya', 'Morogoro', 'Mtwara', 'Mwanza', 'Njombe', 'Pemba Kaskazini', 
+                        'Pemba Kusini', 'Pwani', 'Rukwa', 'Ruvuma', 'Shinyanga', 'Simiyu', 
+                        'Singida', 'Songwe', 'Tabora', 'Tanga', 'Unguja Kaskazini', 
+                        'Unguja Kusini', 'Unguja Mjini Magharibi'
+                    ] %}
+                    {% for region in tz_regions|sort %}
+                        <option value="{{ region }}">{{ region }}</option>
+                    {% endfor %}
+                </select>
             </div>
-        {% endif %}
+            
+            <!-- Search Filter -->
+            <div style="margin-bottom: 25px;">
+                <label style="font-weight: 700; font-size: 0.85rem; color: var(--green); text-transform: uppercase; display: block; margin-bottom: 10px;">
+                    🔎 Tafuta Jina la Ghala
+                </label>
+                <input type="text" id="storageSearch" placeholder="Andika jina la ghala..." oninput="filterStorages()" style="width: 100%; border: 2px solid var(--green); border-radius: 12px; padding: 12px; font-size: 0.9rem;">
+            </div>
+            
+            <!-- WRS Filter -->
+            <div style="margin-bottom: 25px;">
+                <label style="font-weight: 700; font-size: 0.85rem; color: var(--green); text-transform: uppercase; display: block; margin-bottom: 10px;">
+                    📋 Aina ya Ghala
+                </label>
+                <select id="wrsFilter" onchange="filterStorages()" style="width: 100%; border: 2px solid var(--green); border-radius: 12px; padding: 12px; font-size: 0.9rem;">
+                    <option value="all">🏢 Yote</option>
+                    <option value="wrs">✅ cold rooms</option>
+                    <option value="nonwrs">📦 normal storage</option>
+                </select>
+            </div>
+            
+            <!-- Sort Options -->
+            <div style="margin-bottom: 25px;">
+                <label style="font-weight: 700; font-size: 0.85rem; color: var(--green); text-transform: uppercase; display: block; margin-bottom: 10px;">
+                    📊 Panga Kwa
+                </label>
+                <select id="sortBy" onchange="sortStorages()" style="width: 100%; border: 2px solid var(--green); border-radius: 12px; padding: 12px; font-size: 0.9rem;">
+                    <option value="distance">📍 Umbali (Karibu Kwanza)</option>
+                    <option value="price">💰 Gharama (Bei Nafuu Kwanza)</option>
+                    <option value="capacity">📦 Nafasi Iliyobaki (Kubwa Kwanza)</option>
+                    <option value="name">🔤 Jina (A-Z)</option>
+                </select>
+            </div>
+            
+            <!-- Capacity Range -->
+            <div style="margin-bottom: 25px;">
+                <label style="font-weight: 700; font-size: 0.85rem; color: var(--green); text-transform: uppercase; display: block; margin-bottom: 10px;">
+                    📦 Nafasi Iliyobaki (Tani)
+                </label>
+                <input type="range" id="capacityRange" min="0" max="1000" step="10" value="0" oninput="updateCapacityValue()" style="width: 100%;">
+                <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                    <span id="capacityValue" style="font-size: 0.8rem; color: var(--green); font-weight: 700;">Tani Zote</span>
+                    <span style="font-size: 0.7rem; color: var(--muted);">0 - 1000+ Tani</span>
+                </div>
+            </div>
+            
+            <!-- Reset Button -->
+            <button onclick="resetAllFilters()" class="btn btn-primary" style="width: 100%; margin-top: 10px; padding: 12px; border-radius: 12px; background: linear-gradient(135deg, var(--green), var(--green-dark)); color: white; border: none; font-weight: 700; cursor: pointer;">
+                🔄 Weka Upya Vichujio Vyote
+            </button>
+        </div>
+        
+        <!-- Main Content - Storage Grid -->
+        <div>
+            <!-- Results Stats -->
+            <div id="results-stats" style="margin-bottom: 20px; padding: 15px 20px; background: rgba(47,125,50,0.05); border-radius: 16px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                <div>
+                    <span style="font-weight: 800; font-size: 1.1rem;">
+                        📊 <span id="visibleCount">0</span> kati ya <span id="totalCount">0</span> maghala
+                    </span>
+                </div>
+                <div id="gps-info" style="font-size: 0.85rem; color: var(--muted);">
+                    <!-- GPS status will appear here -->
+                </div>
+                <div>
+                    <span id="selectedRegionBadge" style="background: var(--green); color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; display: none;">
+                        📍 <span id="selectedRegionName"></span>
+                    </span>
+                </div>
+            </div>
+            
+            <!-- Loading Spinner -->
+            <div id="loadingSpinner" style="display: none; text-align: center; padding: 50px;">
+                <div style="border: 4px solid rgba(47,125,50,0.2); border-top: 4px solid var(--green); border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                <p style="margin-top: 15px;">Inatafuta maghala...</p>
+            </div>
+            
+            <!-- Storage Card Grid -->
+            <div id="storage-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 24px;">
+                <!-- Cards will be populated dynamically -->
+            </div>
+        </div>
     </div>
 </div>
 
-<script>
-    function filterRegion() {
-        const selectVal = document.getElementById('regionSelect').value.toLowerCase();
-        const searchVal = document.getElementById('storageSearch').value.toLowerCase().strip ? document.getElementById('storageSearch').value.toLowerCase().strip() : document.getElementById('storageSearch').value.toLowerCase();
-        const cards = document.querySelectorAll('.storage-card');
-
-        cards.forEach(card => {
-            const r = card.getAttribute('data-region');
-            const name = card.getAttribute('data-name');
-            
-            const matchesRegion = selectVal === "" || r === selectVal;
-            const matchesSearch = name.includes(searchVal);
-
-            if (matchesRegion && matchesSearch) {
-                card.style.display = 'flex';
-            } else {
-                card.style.display = 'none';
-            }
-        });
+<style>
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
     }
-
-    // Geolocation triggering
-    function requestGPS() {
-        if (!navigator.geolocation) {
-            alert("Kivinjari chako hakiauni huduma ya GPS (Geolocation).");
-            return;
+    
+    .storage-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+        animation: fadeInUp 0.4s ease;
+    }
+    
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
         }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    .storage-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+        border-color: var(--green) !important;
+    }
+    
+    .btn-primary:hover {
+        transform: scale(1.02);
+        filter: brightness(1.05);
+    }
+    
+    select, input {
+        transition: all 0.3s ease;
+    }
+    
+    select:focus, input:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(47,125,50,0.2);
+    }
+</style>
 
-        navigator.geolocation.getCurrentPosition(position => {
-            const lat = position.coords.latitude;
-            const lng = position.coords.longitude;
-            
-            fetch(`/api/storage/nearest?lat=${lat}&lng=${lng}`)
-                .then(res => res.json())
-                .then(res => {
-                    if (res.success) {
-                        reorderCards(res.data);
-                        document.getElementById('gps-banner').innerHTML = `
-                            <span style="font-size: 0.9rem; color: var(--green-dark); font-weight: 600;">
-                                ✅ Maghala yamepangwa kwa kufuata umbali kutoka mahali ulipo.
-                            </span>
-                        `;
+<script>
+    let allStorages = [];
+    let userLocation = null;
+    let distancesMap = new Map();
+    let currentSort = 'distance';
+    let selectedRegion = '';
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        loadStorages();
+        checkGPSPermission();
+    });
+    
+    function loadStorages() {
+        showLoading(true);
+        fetch('/api/storage')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    allStorages = data.data;
+                    document.getElementById('totalCount').innerText = allStorages.length;
+                    if (userLocation) {
+                        calculateAllDistances();
+                    } else {
+                        filterStorages();
                     }
-                })
-                .catch(err => {
-                    alert("Imeshindikana kupanga ghala kwa kufuata GPS.");
-                    console.error(err);
-                });
-        }, err => {
-            alert("Ruhusa ya eneo ilikataliwa au ilishindikana kupatikana.");
-        });
-    }
-
-    function reorderCards(data) {
-        const grid = document.getElementById('storage-grid');
-        const cardsMap = {};
-        
-        // Find existing cards in DOM
-        document.querySelectorAll('.storage-card').forEach(card => {
-            // We can identify cards using name matching or we can rebuild cards
-            const nameAttr = card.getAttribute('data-name');
-            cardsMap[nameAttr] = card;
-        });
-
-        grid.innerHTML = '';
-        
-        data.forEach(item => {
-            const nameLower = item.name.toLowerCase();
-            const existingCard = cardsMap[nameLower];
-            if (existingCard) {
-                // Show distance badge
-                const db = existingCard.querySelector('.distance-badge');
-                if (db) {
-                    db.textContent = `📍 Umbali: ${item.distance_km} Km kutoka ulipo`;
-                    db.style.display = 'inline-block';
+                } else {
+                    console.error('Failed to load storages:', data.message);
+                    allStorages = [];
+                    filterStorages();
                 }
-                grid.appendChild(existingCard);
-            }
-        });
+                showLoading(false);
+            })
+            .catch(err => {
+                console.error('Error loading storages:', err);
+                showToast('Imeshindikana kupakia maghala', 'error');
+                showLoading(false);
+            });
     }
-
-    // Automatically check on load if permission is already granted
-    window.addEventListener('load', () => {
+    
+    function filterByRegion() {
+        const regionSelect = document.getElementById('regionSelect');
+        selectedRegion = regionSelect.value;
+        
+        const regionBadge = document.getElementById('selectedRegionBadge');
+        const regionNameSpan = document.getElementById('selectedRegionName');
+        
+        if (selectedRegion) {
+            regionNameSpan.innerText = selectedRegion;
+            regionBadge.style.display = 'inline-block';
+        } else {
+            regionBadge.style.display = 'none';
+        }
+        
+        filterStorages();
+    }
+    
+    function checkGPSPermission() {
         if (navigator.permissions) {
             navigator.permissions.query({ name: 'geolocation' }).then(result => {
                 if (result.state === 'granted') {
@@ -179,6 +234,393 @@
                 }
             });
         }
-    });
+    }
+    
+    function requestGPS() {
+        if (!navigator.geolocation) {
+            showToast("Kivinjari chako hakiauni huduma ya GPS", "error");
+            return;
+        }
+        
+        showToast("Inatafuta eneo lako...", "info");
+        
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                userLocation = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                
+                document.getElementById('gps-banner').style.background = 'linear-gradient(135deg, rgba(76,175,80,0.2), rgba(76,175,80,0.08))';
+                document.getElementById('gps-status-text').innerHTML = '✅ GPS imewashwa. Maghala yamepangwa kwa kufuata umbali kutoka kwako.';
+                document.getElementById('gps-activate-btn').innerHTML = '📍 GPS Imeunganishwa';
+                document.getElementById('gps-activate-btn').disabled = true;
+                document.getElementById('gps-activate-btn').style.opacity = '0.7';
+                
+                fetchNearestStorages(userLocation.lat, userLocation.lng);
+            },
+            err => {
+                console.error('GPS Error:', err);
+                let errorMsg = 'Ruhusa ya eneo ilikataliwa. Tafadhali ruhusu GPS.';
+                showToast(errorMsg, 'warning');
+                document.getElementById('gps-status-text').innerHTML = '⚠️ ' + errorMsg;
+            }
+        );
+    }
+    
+    function fetchNearestStorages(lat, lng) {
+        fetch(`/api/storage/nearest?lat=${lat}&lng=${lng}`)
+            .then(res => res.json())
+            .then(res => {
+                if (res.success) {
+                    distancesMap.clear();
+                    res.data.forEach(item => {
+                        distancesMap.set(item.id, item.distance_km);
+                    });
+                    
+                    allStorages = allStorages.map(storage => ({
+                        ...storage,
+                        distance_km: distancesMap.get(storage.id) || null
+                    }));
+                    
+                    currentSort = 'distance';
+                    document.getElementById('sortBy').value = 'distance';
+                    filterStorages();
+                    
+                    document.getElementById('gps-info').innerHTML = `<span style="color: var(--green);">✅ Umbali umehesabiwa kutoka eneo lako</span>`;
+                }
+            })
+            .catch(err => {
+                console.error('Error fetching nearest storages:', err);
+            });
+    }
+    
+    function filterStorages() {
+        let filtered = [...allStorages];
+        
+        // Apply region filter
+        if (selectedRegion) {
+            filtered = filtered.filter(s => s.region === selectedRegion);
+        }
+        
+        // Apply search filter
+        const searchTerm = document.getElementById('storageSearch').value.toLowerCase().trim();
+        if (searchTerm) {
+            filtered = filtered.filter(s => 
+                s.name.toLowerCase().includes(searchTerm) ||
+                s.village.toLowerCase().includes(searchTerm) ||
+                s.district.toLowerCase().includes(searchTerm)
+            );
+        }
+        
+        // Apply WRS filter
+        const wrsFilter = document.getElementById('wrsFilter').value;
+        if (wrsFilter === 'wrs') {
+            filtered = filtered.filter(s => s.accepts_wrs === 1);
+        } else if (wrsFilter === 'nonwrs') {
+            filtered = filtered.filter(s => s.accepts_wrs === 0);
+        }
+        
+        // Apply capacity filter
+        const minCapacity = parseInt(document.getElementById('capacityRange').value) || 0;
+        if (minCapacity > 0) {
+            filtered = filtered.filter(s => s.available_tons >= minCapacity);
+        }
+        
+        // Apply sorting
+        filtered = sortStoragesArray(filtered);
+        
+        // Update stats
+        document.getElementById('visibleCount').innerText = filtered.length;
+        
+        renderStorages(filtered);
+    }
+    
+    function sortStorages() {
+        currentSort = document.getElementById('sortBy').value;
+        filterStorages();
+    }
+    
+    function sortStoragesArray(storages) {
+        const sortType = currentSort;
+        
+        return storages.sort((a, b) => {
+            switch(sortType) {
+                case 'distance':
+                    const distA = a.distance_km !== null && a.distance_km !== undefined ? a.distance_km : Infinity;
+                    const distB = b.distance_km !== null && b.distance_km !== undefined ? b.distance_km : Infinity;
+                    return distA - distB;
+                    
+                case 'price':
+                    return a.cost_per_bag_per_month_tzs - b.cost_per_bag_per_month_tzs;
+                    
+                case 'capacity':
+                    return b.available_tons - a.available_tons;
+                    
+                case 'name':
+                    return a.name.localeCompare(b.name);
+                    
+                default:
+                    return 0;
+            }
+        });
+    }
+    
+    function renderStorages(storages) {
+        const grid = document.getElementById('storage-grid');
+        
+        if (!storages || storages.length === 0) {
+            grid.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; background: var(--card-bg); border-radius: 20px;">
+                    <span style="font-size: 4rem;">🏚️</span>
+                    <h3 style="color: var(--muted); margin-top: 15px;">Hakuna maghala yaliyopatikana</h3>
+                    <p style="color: var(--muted);">Jaribu kubadilisha vichujio au chagua mkoa mwingine</p>
+                </div>
+            `;
+            return;
+        }
+        
+        grid.innerHTML = storages.map(storage => {
+            const used = storage.capacity_tons - storage.available_tons;
+            const pct = storage.capacity_tons > 0 ? Math.round((used / storage.capacity_tons) * 100) : 0;
+            const barColor = pct > 85 ? '#c62828' : (pct > 60 ? '#ffb300' : '#2e7d32');
+            const distance = storage.distance_km ? storage.distance_km.toFixed(1) : null;
+            
+            let distanceHtml = '';
+            let distanceIcon = '📍';
+            if (distance) {
+                if (distance <= 10) {
+                    distanceHtml = `<span style="background: #4caf50; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">✅ ${distance} km - Karibu Sana</span>`;
+                    distanceIcon = '🏠';
+                } else if (distance <= 30) {
+                    distanceHtml = `<span style="background: #ff9800; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">🚚 ${distance} km - Umbali wa Kawaida</span>`;
+                    distanceIcon = '🚛';
+                } else {
+                    distanceHtml = `<span style="background: #f44336; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 700;">⚠️ ${distance} km - Umbali Mkubwa</span>`;
+                    distanceIcon = '⚠️';
+                }
+            }
+            
+            return `
+                <div class="storage-card" 
+                     data-id="${storage.id}"
+                     data-region="${storage.region.toLowerCase()}"
+                     data-name="${storage.name.toLowerCase()}"
+                     onclick="viewStorageDetails(${storage.id})"
+                     style="background: var(--card-bg); border: 2px solid rgba(47, 125, 50, 0.15); border-radius: 20px; padding: 22px; box-shadow: var(--shadow); cursor: pointer;">
+                    
+                    <div>
+                        <!-- Header -->
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 12px;">
+                            <div>
+                                <span style="font-weight: 800; color: var(--green); font-size: 0.8rem; text-transform: uppercase; background: rgba(47,125,50,0.1); padding: 4px 10px; border-radius: 20px;">
+                                    📍 ${storage.region}
+                                </span>
+                                ${storage.accepts_wrs === 1 ? 
+                                    '<span style="background: linear-gradient(135deg, #2e7d32, #1b5e20); color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; margin-left: 8px;">📋 WRS</span>' : 
+                                    '<span style="background: #9e9e9e; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 700; margin-left: 8px;">📋 Bila WRS</span>'
+                                }
+                            </div>
+                            ${distanceHtml ? `<div>${distanceHtml}</div>` : ''}
+                        </div>
+                        
+                        <!-- Name & Location -->
+                        <h3 style="color: var(--dark); font-size: 1.25rem; font-weight: 800; margin: 10px 0 5px 0;">${distanceIcon} ${storage.name}</h3>
+                        <div style="font-size: 0.85rem; color: var(--muted); margin-bottom: 16px;">
+                            <span>🏘️ ${storage.village}</span> | 
+                            <span>🏛️ ${storage.district}</span>
+                        </div>
+                        
+                        <!-- Capacity Progress -->
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); font-weight: 600; margin-bottom: 8px;">
+                                <span>📊 Uwezo uliotumika:</span>
+                                <strong>${Math.round(used)} / ${Math.round(storage.capacity_tons)} Tani (${pct}%)</strong>
+                            </div>
+                            <div style="height: 12px; background: rgba(0,0,0,0.08); border-radius: 99px; overflow: hidden;">
+                                <div class="capacity-indicator" style="width: ${pct}%; height: 100%; background: ${barColor}; border-radius: 99px;"></div>
+                            </div>
+                            <div style="margin-top: 8px; font-size: 0.75rem; color: var(--green); font-weight: 700;">
+                                ✅ Nafasi iliyobaki: <strong>${Math.round(storage.available_tons)} Tani</strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Footer -->
+                    <div style="border-top: 1px dashed rgba(0,0,0,0.1); padding-top: 16px; margin-top: 8px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <small style="color: var(--muted); display: block; font-size: 0.7rem; text-transform: uppercase; font-weight: 700;">💰 Gharama ya Hifadhi:</small>
+                            <span style="font-size: 1.2rem; font-weight: 800; color: var(--green);">TSh ${formatNumber(storage.cost_per_bag_per_month_tzs)}</span>
+                            <small style="color: var(--muted); font-size: 0.7rem;"> / mfuko / mwezi</small>
+                        </div>
+                        <button onclick="event.stopPropagation(); callStorage('${storage.contact_phone}')" 
+                                class="btn btn-primary" 
+                                style="border-radius: 30px; padding: 10px 20px; font-size: 0.85rem; font-weight: 700; background: var(--green); color: white; border: none; cursor: pointer;">
+                            📞 Wasiliana Sasa
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+    
+    function updateCapacityValue() {
+        const range = document.getElementById('capacityRange');
+        const value = range.value;
+        const span = document.getElementById('capacityValue');
+        
+        if (value == 0) {
+            span.innerHTML = '📦 Tani Zote';
+        } else {
+            span.innerHTML = `📦 Tani ${value}+`;
+        }
+        
+        filterStorages();
+    }
+    
+    function resetAllFilters() {
+        // Reset region dropdown
+        document.getElementById('regionSelect').value = '';
+        selectedRegion = '';
+        document.getElementById('selectedRegionBadge').style.display = 'none';
+        
+        // Reset other filters
+        document.getElementById('storageSearch').value = '';
+        document.getElementById('wrsFilter').value = 'all';
+        document.getElementById('sortBy').value = 'distance';
+        document.getElementById('capacityRange').value = '0';
+        document.getElementById('capacityValue').innerHTML = '📦 Tani Zote';
+        
+        currentSort = 'distance';
+        
+        filterStorages();
+        showToast('Vichujio vyote vimewekwa upya', 'success');
+    }
+    
+    function callStorage(phoneNumber) {
+        window.location.href = `tel:${phoneNumber}`;
+    }
+    
+    function viewStorageDetails(storageId) {
+        const storage = allStorages.find(s => s.id === storageId);
+        if (storage) {
+            showStorageModal(storage);
+        }
+    }
+    
+    function showStorageModal(storage) {
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100%';
+        modal.style.height = '100%';
+        modal.style.background = 'rgba(0,0,0,0.8)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '10000';
+        modal.onclick = () => modal.remove();
+        
+        const distance = storage.distance_km ? storage.distance_km.toFixed(1) : 'Haiwezekani kuhesabiwa';
+        
+        modal.innerHTML = `
+            <div onclick="event.stopPropagation()" style="background: var(--card-bg); border-radius: 24px; max-width: 500px; width: 90%; padding: 30px; position: relative; max-height: 80vh; overflow-y: auto;">
+                <button onclick="this.closest('div').remove()" style="position: absolute; top: 15px; right: 15px; background: none; border: none; font-size: 24px; cursor: pointer; color: var(--muted);">&times;</button>
+                <h2 style="color: var(--green); margin-bottom: 20px;">🏚️ ${storage.name}</h2>
+                
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(47,125,50,0.05); border-radius: 16px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div><strong>📍 Mkoa:</strong><br>${storage.region}</div>
+                        <div><strong>📏 Umbali:</strong><br>${distance} km</div>
+                        <div><strong>🏘️ Kijiji:</strong><br>${storage.village}</div>
+                        <div><strong>🏛️ Wilaya:</strong><br>${storage.district}</div>
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(47,125,50,0.05); border-radius: 16px;">
+                    <div><strong>📦 Uwezo wa Ghala:</strong> ${storage.capacity_tons} Tani</div>
+                    <div><strong>✅ Nafasi Iliyobaki:</strong> ${storage.available_tons} Tani</div>
+                    <div><strong>💰 Gharama:</strong> TSh ${formatNumber(storage.cost_per_bag_per_month_tzs)} / mfuko / mwezi</div>
+                    <div><strong>📋 Hali ya WRS:</strong> ${storage.accepts_wrs === 1 ? '✅ Inakubali WRS' : '❌ Haikubali WRS'}</div>
+                </div>
+                
+                <div style="margin-bottom: 20px; padding: 15px; background: rgba(47,125,50,0.05); border-radius: 16px;">
+                    <strong>📞 Mawasiliano:</strong><br>
+                    <a href="tel:${storage.contact_phone}" style="color: var(--green); font-size: 1.2rem; font-weight: 700; text-decoration: none;">${storage.contact_phone}</a>
+                </div>
+                
+                <button onclick="callStorage('${storage.contact_phone}')" class="btn btn-primary" style="width: 100%; padding: 14px; border-radius: 12px; background: var(--green); color: white; border: none; font-weight: 700; cursor: pointer;">
+                    📞 Piga Simu Sasa
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+    }
+    
+    function formatNumber(num) {
+        return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    }
+    
+    function showToast(message, type = 'info') {
+        const toast = document.createElement('div');
+        toast.style.position = 'fixed';
+        toast.style.bottom = '20px';
+        toast.style.right = '20px';
+        toast.style.background = type === 'error' ? '#f44336' : (type === 'success' ? '#4caf50' : '#2196f3');
+        toast.style.color = 'white';
+        toast.style.padding = '12px 24px';
+        toast.style.borderRadius = '8px';
+        toast.style.zIndex = '10001';
+        toast.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+        toast.style.animation = 'slideInRight 0.3s ease';
+        toast.innerText = message;
+        
+        document.body.appendChild(toast);
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
+    
+    function showLoading(show) {
+        const spinner = document.getElementById('loadingSpinner');
+        if (spinner) {
+            spinner.style.display = show ? 'block' : 'none';
+        }
+    }
 </script>
+
+<style>
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    ::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    ::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.05);
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb {
+        background: var(--green);
+        border-radius: 10px;
+    }
+    
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--green-dark);
+    }
+</style>
 {% endblock %}
