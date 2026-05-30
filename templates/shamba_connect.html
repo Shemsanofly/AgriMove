@@ -1,0 +1,418 @@
+{% extends "dashboard_base.html" %}
+
+{% block content %}
+<style>
+  .shamba-page { max-width: 1100px; margin: 0 auto; }
+  .shamba-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+    gap: 24px;
+    align-items: start;
+  }
+  .shamba-card {
+    background: var(--card-bg);
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    border: 2px solid rgba(47, 125, 50, 0.2);
+  }
+  .shamba-card--gold { border-color: rgba(242, 193, 78, 0.35); }
+  .shamba-card h3 { color: var(--green); font-size: 1.25rem; margin: 0 0 8px; font-weight: 700; }
+  .shamba-card--gold h3 { color: #d1a115; }
+  .shamba-card .muted { color: var(--muted); font-size: 0.9rem; margin-bottom: 18px; line-height: 1.5; }
+  .shamba-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .shamba-form-row .form-group,
+  .shamba-card .form-group { margin-bottom: 14px; }
+  .shamba-card label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 6px;
+    color: var(--dark);
+  }
+  .shamba-card input,
+  .shamba-card select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 0.95rem;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  .shamba-card input:focus,
+  .shamba-card select:focus {
+    outline: 2px solid rgba(47, 125, 50, 0.35);
+    border-color: var(--green);
+  }
+  .pool-card {
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 14px;
+    padding: 16px;
+    background: rgba(0,0,0,0.01);
+  }
+  .pool-card--highlight { background: rgba(242,193,78,0.04); border-color: rgba(47,125,50,0.35); }
+  .join-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 99999;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+  }
+  .join-modal.open { display: flex; }
+  .join-modal__panel {
+    background: var(--card-bg);
+    max-width: 420px;
+    width: 100%;
+    padding: 24px;
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    border: 2px solid var(--green);
+  }
+  .join-modal__panel input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid rgba(0,0,0,0.15);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 0.95rem;
+    background: var(--card-bg);
+    color: var(--text);
+  }
+  @media (max-width: 640px) {
+    .shamba-form-row { grid-template-columns: 1fr; }
+    .shamba-card { padding: 18px; }
+  }
+</style>
+
+<div class="shamba-page">
+  <div class="shamba-grid">
+    <!-- Request form -->
+    <div class="shamba-card">
+      <h3 data-i18n="shamba_form_title">🌾 Request Transport / Reserve Cargo</h3>
+      <p class="muted" data-i18n="shamba_form_desc">Enter your cargo details to find nearby fellow farmers and share transport costs.</p>
+
+      <form id="poolRequestForm" class="dashboard-form" onsubmit="submitTransportRequest(event)">
+        <div class="form-group">
+          <label for="farmer_name" data-i18n="shamba_full_name">Your Full Name</label>
+          <input type="text" id="farmer_name" data-i18n-placeholder="shamba_ph_name" placeholder="e.g. Juma Hamisi" required autocomplete="name" />
+        </div>
+        <div class="form-group">
+          <label for="farmer_phone" data-i18n="shamba_phone">Phone Number (M-Pesa)</label>
+          <input type="tel" id="farmer_phone" data-i18n-placeholder="ph_phone" placeholder="+255..." required autocomplete="tel" />
+        </div>
+        <div class="shamba-form-row">
+          <div class="form-group">
+            <label for="district" data-i18n="shamba_district">District</label>
+            <input type="text" id="district" data-i18n-placeholder="shamba_ph_district" placeholder="Rural Mbeya" required />
+          </div>
+          <div class="form-group">
+            <label for="ward" data-i18n="shamba_ward">Ward</label>
+            <input type="text" id="ward" data-i18n-placeholder="shamba_ph_ward" placeholder="Mbeya Town" required />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="village" data-i18n="shamba_village">Village</label>
+          <input type="text" id="village" data-i18n-placeholder="shamba_ph_village" placeholder="Uyole Village" required />
+        </div>
+        <div class="shamba-form-row">
+          <div class="form-group">
+            <label for="crop_type" data-i18n="shamba_crop">Crop to Transport</label>
+            <select id="crop_type" required>
+              <option value="Mahindi" data-i18n="crop_maize">🌽 Maize</option>
+              <option value="Mpunga" data-i18n="crop_rice">🌾 Rice</option>
+              <option value="Muhogo" data-i18n="crop_cassava">🍠 Cassava</option>
+              <option value="Nyanya" data-i18n="crop_tomato">🍅 Tomatoes</option>
+              <option value="Vitunguu" data-i18n="crop_onion">🧅 Onions</option>
+              <option value="Kahawa" data-i18n="crop_coffee">☕ Coffee</option>
+              <option value="Korosho" data-i18n="crop_cashew">🥜 Cashews</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="quantity_bags" data-i18n="shamba_bags">Number of Bags</label>
+            <input type="number" id="quantity_bags" placeholder="50" min="1" required inputmode="numeric" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="pickup_date" data-i18n="shamba_date">Transport Date</label>
+          <input type="date" id="pickup_date" required />
+        </div>
+        <button class="btn btn-primary" type="submit" style="width:100%; padding:14px; margin-top:4px;" data-i18n="shamba_submit">Submit & Find Match</button>
+      </form>
+    </div>
+
+    <!-- Matches + pools -->
+    <div style="display:grid; gap:24px;">
+      <div id="matching-section" class="shamba-card shamba-card--gold" style="display:none;">
+        <h3 data-i18n="shamba_matches_title">Nearby Matching Farmers</h3>
+        <p class="muted" data-i18n="shamba_matches_desc">These farmers are shipping the same crop from your ward/district around the same time:</p>
+        <div id="matches-list" style="display:grid; gap:12px;"></div>
+      </div>
+
+      <div class="shamba-card">
+        <h3 data-i18n="shamba_pools_title">Available Group Trucks (Pools)</h3>
+        <p class="muted" data-i18n="shamba_pools_desc">Click \"Join\" to reserve a slot and share transport costs.</p>
+        <div id="pools-list" style="display:grid; gap:14px;">
+          {% if pools %}
+            {% for pool in pools %}
+              <div class="pool-card" data-pool-id="{{ pool.id }}">
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:10px; border-bottom:1px dashed rgba(0,0,0,0.1); padding-bottom:8px;">
+                  <div>
+                    <h4 style="margin:0; font-size:1rem; font-weight:700;">
+                      <span data-i18n="shamba_route">Route:</span> {{ pool.route_from }} ➡️ {{ pool.route_to }}
+                    </h4>
+                    <small style="color:var(--muted);">📅 <span data-i18n="shamba_departure">Departure:</span> {{ pool.departure_date }}</small>
+                  </div>
+                  <span style="background:var(--green-light); color:var(--green-dark); padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:700;">
+                    <span data-i18n="shamba_slots">Slots left:</span> {{ pool.available_slots }} / {{ pool.truck_capacity_bags }}
+                  </span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+                  <div>
+                    <div style="font-size:0.85rem; color:var(--muted);">
+                      <span data-i18n="shamba_driver">Driver:</span> <strong>{{ pool.driver_name }}</strong> ({{ pool.driver_phone }})
+                    </div>
+                    <div style="font-size:1.1rem; font-weight:800; color:var(--green); margin-top:4px;">
+                      TSh {{ "{:,.0f}".format(pool.cost_per_bag_tzs) }}
+                      <span style="font-size:0.8rem; color:var(--muted); font-weight:500;" data-i18n="shamba_per_bag">per bag</span>
+                    </div>
+                  </div>
+                  <button type="button" onclick="promptJoinPool({{ pool.id }}, {{ pool.cost_per_bag_tzs }}, {{ pool.available_slots }})" class="btn btn-outline" style="border-radius:20px; font-weight:700;" data-i18n="shamba_join">Join</button>
+                </div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <p class="muted" style="text-align:center; margin:0;" data-i18n="shamba_no_pools">No open group trucks right now.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Join modal -->
+<div id="joinModal" class="join-modal" role="dialog" aria-modal="true">
+  <div class="join-modal__panel">
+    <h3 style="color:var(--green); margin:0 0 10px; font-size:1.2rem;" data-i18n="shamba_modal_title">Join Group Truck</h3>
+    <p class="muted" style="margin-bottom:16px;">
+      <span data-i18n="shamba_modal_cost">Cost per bag is</span>
+      <span id="modalCostInfo" style="font-weight:700; color:var(--dark);"></span> TSh.
+    </p>
+    <form onsubmit="submitJoinPool(event)">
+      <input type="hidden" id="modalPoolId">
+      <div class="form-group">
+        <label for="modal_farmer_name" data-i18n="shamba_modal_name">Your name</label>
+        <input type="text" id="modal_farmer_name" required autocomplete="name" />
+      </div>
+      <div class="form-group">
+        <label for="modal_farmer_phone" data-i18n="shamba_modal_phone">Phone number</label>
+        <input type="tel" id="modal_farmer_phone" required autocomplete="tel" />
+      </div>
+      <div class="form-group">
+        <label for="modal_bags" data-i18n="shamba_modal_bags">Number of bags</label>
+        <input type="number" id="modal_bags" min="1" required inputmode="numeric" oninput="calculateModalTotal()" />
+        <small style="color:var(--muted); display:block; margin-top:4px;">
+          <span data-i18n="shamba_modal_slots">Slots remaining:</span> <span id="modalMaxSlots"></span>
+        </small>
+      </div>
+      <div style="background:rgba(47,125,50,0.08); padding:12px; border-radius:10px; margin-bottom:16px; text-align:center; border:1px dashed var(--green);">
+        <span style="font-size:0.85rem; color:var(--muted);" data-i18n="shamba_modal_total">Your total cost:</span>
+        <div style="font-size:1.35rem; font-weight:800; color:var(--green-dark);" id="modalTotalCost">0 TSh</div>
+      </div>
+      <div style="display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap;">
+        <button type="button" onclick="closeJoinModal()" class="btn btn-ghost" data-i18n="shamba_cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" data-i18n="shamba_confirm">Confirm</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="simulated-sms-inbox" style="margin-top:32px; background:#0f1f16; color:#e1ebe3; padding:20px; border-radius:16px; border:2px solid var(--green); display:none;">
+  <div style="display:flex; justify-content:space-between; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:8px; margin-bottom:12px; font-weight:700; font-size:0.85rem; color:#b7c6bc;">
+    <span data-i18n="shamba_sms_inbox">📱 SIMULATED SMS INBOX</span>
+    <button type="button" onclick="document.getElementById('simulated-sms-inbox').style.display='none'" style="background:transparent; border:none; color:#c1d1c5; cursor:pointer; font-weight:700;" data-i18n="shamba_sms_close">[Close]</button>
+  </div>
+  <div id="sms-text-content" style="font-size:0.95rem; line-height:1.5; font-family:monospace; white-space:pre-wrap;"></div>
+</div>
+
+<script>
+  let activeCostPerBag = 0;
+  let activeMaxSlots = 0;
+  let lastMatches = [];
+
+  function tr(key, vars) {
+    return window.__ ? window.__(key, vars) : key;
+  }
+
+  function renderMatchCard(m) {
+    const card = document.createElement("div");
+    card.className = "pool-card pool-card--highlight";
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+        <div>
+          <h4 style="margin:0; font-size:0.95rem; font-weight:700;">📍 ${tr("shamba_match_village")} ${m.village}</h4>
+          <div style="font-size:0.8rem; color:var(--muted); margin-top:2px;">${tr("shamba_match_partner", { name: m.farmer_name, bags: m.quantity_bags })}</div>
+          <div style="font-size:0.75rem; color:var(--muted);">📅 ${tr("shamba_match_pickup")} ${m.pickup_date}</div>
+        </div>
+        <span style="background:#fff3cd; color:#856404; padding:3px 8px; border-radius:10px; font-size:0.7rem; font-weight:700;">${tr("shamba_match_days")}</span>
+      </div>`;
+    return card;
+  }
+
+  function renderMatches(matches) {
+    lastMatches = matches || [];
+    const matchesSec = document.getElementById("matching-section");
+    const matchesList = document.getElementById("matches-list");
+    matchesList.innerHTML = "";
+    matchesSec.style.display = "block";
+
+    if (lastMatches.length > 0) {
+      lastMatches.forEach(m => matchesList.appendChild(renderMatchCard(m)));
+    } else {
+      matchesList.innerHTML = `<p class="muted" style="text-align:center; margin:0;" data-i18n="shamba_no_matches">${tr("shamba_no_matches")}</p>`;
+    }
+    if (window.applyAgriMoveLanguage) {
+      window.applyAgriMoveLanguage(localStorage.getItem("agrimove_lang") || "en");
+    }
+  }
+
+  function renderPoolCard(pool) {
+    const div = document.createElement("div");
+    div.className = "pool-card pool-card--highlight";
+    div.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; margin-bottom:10px; border-bottom:1px dashed rgba(0,0,0,0.1); padding-bottom:8px;">
+        <div>
+          <h4 style="margin:0; font-size:1rem; font-weight:700;">${tr("shamba_route")} ${pool.route_from} ➡️ ${pool.route_to}</h4>
+          <small style="color:var(--muted);">📅 ${tr("shamba_departure")} ${pool.departure_date}</small>
+        </div>
+        <span style="background:var(--green-light); color:var(--green-dark); padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:700;">
+          ${tr("shamba_slots")} ${pool.available_slots} / ${pool.truck_capacity_bags}
+        </span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+        <div>
+          <div style="font-size:0.85rem; color:var(--muted);">${tr("shamba_driver")} <strong>${pool.driver_name}</strong> (${pool.driver_phone})</div>
+          <div style="font-size:1.1rem; font-weight:800; color:var(--green); margin-top:4px;">
+            TSh ${Number(pool.cost_per_bag_tzs).toLocaleString()} <span style="font-size:0.8rem; color:var(--muted); font-weight:500;">${tr("shamba_per_bag")}</span>
+          </div>
+        </div>
+        <button type="button" onclick="promptJoinPool(${pool.id}, ${pool.cost_per_bag_tzs}, ${pool.available_slots})" class="btn btn-outline" style="border-radius:20px; font-weight:700;">${tr("shamba_join")}</button>
+      </div>`;
+    return div;
+  }
+
+  function submitTransportRequest(event) {
+    event.preventDefault();
+    const payload = {
+      farmer_name: document.getElementById("farmer_name").value.trim(),
+      farmer_phone: document.getElementById("farmer_phone").value.trim(),
+      district: document.getElementById("district").value.trim(),
+      ward: document.getElementById("ward").value.trim(),
+      village: document.getElementById("village").value.trim(),
+      crop_type: document.getElementById("crop_type").value,
+      quantity_bags: parseInt(document.getElementById("quantity_bags").value, 10),
+      pickup_date: document.getElementById("pickup_date").value
+    };
+
+    fetch("/api/transport/request", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        alert(res.message);
+        renderMatches(res.data.matches || []);
+        loadWardsPools(payload.ward);
+      } else {
+        alert(tr("shamba_error") + " " + res.message);
+      }
+    })
+    .catch(() => alert(tr("transport_submit_failed")));
+  }
+
+  function loadWardsPools(ward) {
+    fetch(`/api/transport/pool/${encodeURIComponent(ward)}`)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.data.length > 0) {
+          const list = document.getElementById("pools-list");
+          res.data.forEach(pool => list.prepend(renderPoolCard(pool)));
+        }
+      });
+  }
+
+  function promptJoinPool(poolId, costPerBag, maxSlots) {
+    activeCostPerBag = costPerBag;
+    activeMaxSlots = maxSlots;
+    document.getElementById("modalPoolId").value = poolId;
+    document.getElementById("modalCostInfo").textContent = costPerBag.toLocaleString();
+    document.getElementById("modalMaxSlots").textContent = maxSlots;
+    const bagInput = document.getElementById("modal_bags");
+    bagInput.value = 1;
+    bagInput.max = maxSlots;
+    calculateModalTotal();
+    document.getElementById("joinModal").classList.add("open");
+  }
+
+  function closeJoinModal() {
+    document.getElementById("joinModal").classList.remove("open");
+  }
+
+  function calculateModalTotal() {
+    const bags = parseInt(document.getElementById("modal_bags").value, 10) || 0;
+    document.getElementById("modalTotalCost").textContent = (bags * activeCostPerBag).toLocaleString() + " TSh";
+  }
+
+  function submitJoinPool(event) {
+    event.preventDefault();
+    const poolId = document.getElementById("modalPoolId").value;
+    const name = document.getElementById("modal_farmer_name").value.trim();
+    const phone = document.getElementById("modal_farmer_phone").value.trim();
+    const bags = parseInt(document.getElementById("modal_bags").value, 10);
+
+    if (bags > activeMaxSlots) {
+      alert(tr("transport_bags_exceed"));
+      return;
+    }
+
+    fetch(`/api/transport/join/${poolId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ farmer_name: name, farmer_phone: phone, bags })
+    })
+    .then(res => res.json())
+    .then(res => {
+      if (res.success) {
+        closeJoinModal();
+        if (window.showSmsToast) window.showSmsToast(res.data.driver_phone, res.data.sms_confirmation);
+        const smsBox = document.getElementById("simulated-sms-inbox");
+        document.getElementById("sms-text-content").textContent =
+          tr("shamba_sms_from") + "\n" + res.data.sms_confirmation;
+        smsBox.style.display = "block";
+        setTimeout(() => window.location.reload(), 5000);
+      } else {
+        alert(tr("shamba_error") + " " + res.message);
+      }
+    })
+    .catch(() => alert(tr("transport_join_failed")));
+  }
+
+  window.addEventListener("agrimove:languagechange", () => {
+    if (document.getElementById("matching-section").style.display !== "none") {
+      renderMatches(lastMatches);
+    }
+  });
+
+  document.getElementById("pickup_date").min = new Date().toISOString().split("T")[0];
+</script>
+{% endblock %}

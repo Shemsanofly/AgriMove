@@ -1,0 +1,126 @@
+{% extends "dashboard_base.html" %}
+
+{% block content %}
+  <section class="dashboard-grid">
+    <div class="card ai-card">
+      <h3 data-i18n="ai_route_active">AI Route Optimization Active</h3>
+      <p>
+        <span data-i18n="ai_route_desc">Real-time route planning is enabled for every request.</span>
+      </p>
+    </div>
+  </section>
+
+  <section class="dashboard-section">
+    <h2 data-i18n="market_intel">Market Intelligence & Buyer Offers</h2>
+    <div class="market-quick-links">
+      <a href="{{ url_for('market_prices') }}" class="market-link">
+        <span class="icon">📊</span>
+        <span class="text" data-i18n="view_prices">View Market Prices</span>
+        <span class="arrow">→</span>
+      </a>
+      <a href="{{ url_for('profit_estimator_page') }}" class="market-link">
+        <span class="icon">💡</span>
+        <span class="text" data-i18n="calc_profit">Calculate Profit</span>
+        <span class="arrow">→</span>
+      </a>
+      <a href="{{ url_for('farmer_offers', farmer_id=1) }}" class="market-link" style="border-left: 4px solid #2ecc71; background: #f0fdf4;">
+        <span class="icon">💼</span>
+        <span class="text" data-i18n="view_offers">View Buyer Offers</span>
+        <span class="arrow">→</span>
+      </a>
+      <a href="{{ url_for('buyer_marketplace') }}" class="market-link">
+        <span class="icon">🛒</span>
+        <span class="text" data-i18n="marketplace_hub">Marketplace Hub</span>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+  </section>
+
+  <section class="card form-card" style="max-width: 720px;">
+    {% if not at_sms_status.credentials_valid %}
+    <div style="background:#fdecea;border:1px solid #c62828;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:0.88rem;line-height:1.5;color:#7f1d1d;">
+      <strong>SMS API key not accepted by Africa's Talking (401)</strong>
+      <p style="margin:8px 0 0;">Your key is in <code>.env</code> but the sandbox server rejects it. Generate a <strong>new</strong> key at
+        <a href="https://account.africastalking.com/apps/sandbox" target="_blank" rel="noopener">Sandbox Settings → API Key</a>,
+        paste into <code>AT_API_KEY=</code>, restart <code>python app.py</code>, then run <code>python verify_at_key.py</code> until it says Valid: True.</p>
+    </div>
+    {% endif %}
+    <div class="sms-help-banner" style="background:#e8f5e9;border:1px solid #2f7d32;border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:0.88rem;line-height:1.5;">
+      <strong data-i18n="sms_help_title">SMS via Africa's Talking Sandbox</strong>
+      <p style="margin:8px 0 6px;" data-i18n="sms_help_body">Your transport request sends an SMS through Africa's Talking (username: sandbox). The API send is working when you see status Success in the terminal.</p>
+      <p style="margin:0 0 4px;color:#1b5e20;" data-i18n="sms_help_step1">1. Register your phone at AT sandbox (link below).</p>
+      <p style="margin:0 0 4px;color:#1b5e20;" data-i18n="sms_help_step2">2. Submit this form with the same +255... number.</p>
+      <p style="margin:0 0 8px;color:#1b5e20;" data-i18n="sms_help_step3">3. Read the SMS in the AT sandbox outbox (recommended) or simulator.</p>
+      <p style="margin:0;font-size:0.82rem;color:#5d4037;" data-i18n="sms_help_sim_fail">
+        If simulator Connect shows "Failed to launch", port 1517 is blocked on your network. Use the SMS Outbox link instead, or try mobile hotspot.
+      </p>
+      <p style="margin:10px 0 0;display:flex;flex-wrap:wrap;gap:10px;">
+        <a href="{{ at_sms_status.register_phone_url }}" target="_blank" rel="noopener noreferrer" style="color:#1b5e20;font-weight:700;">Register phone</a>
+        <a href="{{ at_sms_status.sandbox_outbox_url }}" target="_blank" rel="noopener noreferrer" style="color:#1b5e20;font-weight:700;">SMS Outbox</a>
+        <a href="{{ at_sms_status.simulator_url }}" target="_blank" rel="noopener noreferrer" style="color:#1b5e20;font-weight:700;">Simulator (:1517)</a>
+      </p>
+    </div>
+    <h3 data-i18n="submit_transport">Submit Transport Request</h3>
+    <form method="post" class="dashboard-form">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="name" data-i18n="farmer_name">Farmer Name</label>
+          <input id="name" name="name" type="text" data-i18n-placeholder="ph_name" placeholder="Ama Mensah" required />
+        </div>
+        <div class="form-group">
+          <label for="phone" data-i18n="label_phone">Phone Number</label>
+          <input id="phone" name="phone" type="tel" data-i18n-placeholder="ph_phone" placeholder="+255..." required />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="pickup_location" data-i18n="pickup_location">Pickup Location</label>
+          <select id="pickup_location" name="pickup_location" required>
+            <option value="" data-i18n="select_pickup">Select pickup point</option>
+            {% for location in pickup_locations %}
+              <option value="{{ location }}">{{ location }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="destination" data-i18n="th_destination">Destination</label>
+          <select id="destination" name="destination" required>
+            <option value="" data-i18n="select_market">Select market destination</option>
+            {% for region in destination_regions %}
+              <option value="{{ region }}">{{ region }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="goods_type" data-i18n="goods_type">Goods Type</label>
+          <select id="goods_type" name="goods_type" required>
+            <option value="" data-i18n="select_crop">Select crop</option>
+            {% for crop in crops %}
+              <option value="{{ crop }}">{{ crop }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="quantity" data-i18n="quantity">Quantity</label>
+          <input id="quantity" name="quantity" type="text" data-i18n-placeholder="ph_quantity" placeholder="20 crates" required />
+        </div>
+      </div>
+      <button class="btn btn-primary" type="submit" data-i18n="btn_request_transport">Request Transport</button>
+    </form>
+  </section>
+
+  {% if sms_toast %}
+  <script>
+    document.addEventListener("DOMContentLoaded", function () {
+      if (window.showSmsToast) {
+        window.showSmsToast(
+          {{ sms_toast.phone | tojson }},
+          {{ sms_toast.message | tojson }}
+        );
+      }
+    });
+  </script>
+  {% endif %}
+{% endblock %}

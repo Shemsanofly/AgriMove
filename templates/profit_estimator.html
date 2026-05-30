@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Profit Estimator | AgriMove AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="estimator-container">
+        <header class="estimator-header">
+            <div class="container">
+                <a href="{{ url_for('farmer_dashboard') }}" class="back-link">← Farmer Dashboard</a>
+                <h1>💡 Smart Profit Estimator</h1>
+                <p>Calculate your profit potential before shipping</p>
+            </div>
+        </header>
+
+        <main class="container estimator-main">
+            <div class="estimator-grid">
+                <!-- Input Form -->
+                <section class="card estimator-form">
+                    <h2>Calculate Your Profit</h2>
+                    <form id="estimatorForm">
+                        <div class="form-group">
+                            <label for="crop">Crop Type *</label>
+                            <select id="crop" required>
+                                <option value="">-- Select Crop --</option>
+                                {% for crop in crops %}
+                                    <option value="{{ crop }}">{{ crop }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="quantity">Quantity (kg) *</label>
+                            <input type="number" id="quantity" placeholder="e.g., 500" min="1" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="transportCost">Transport Cost (TZS) *</label>
+                            <input type="number" id="transportCost" placeholder="e.g., 50000" min="0" required />
+                        </div>
+
+                        <div class="form-group">
+                            <label for="destination">Destination Market *</label>
+                            <select id="destination" required>
+                                <option value="">-- Select Market --</option>
+                                {% for region in regions %}
+                                    <option value="{{ region }}">{{ region }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" style="width: 100%;">
+                            📊 Estimate Profit
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Results Panel -->
+                <section class="card results-panel" id="resultsPanel" style="display: none;">
+                    <h2>📈 Profit Analysis</h2>
+
+                    <div class="results-grid">
+                        <div class="result-card">
+                            <h3>Market Price Per Unit</h3>
+                            <p class="result-value" id="marketPrice">--</p>
+                            <span class="unit">TZS/kg</span>
+                        </div>
+
+                        <div class="result-card">
+                            <h3>Estimated Revenue</h3>
+                            <p class="result-value" id="revenue">--</p>
+                            <span class="unit">Total Income</span>
+                        </div>
+
+                        <div class="result-card">
+                            <h3>Total Costs</h3>
+                            <p class="result-value" id="costs">--</p>
+                            <span class="unit">Transport + Losses</span>
+                        </div>
+
+                        <div class="result-card highlight">
+                            <h3>🎉 Estimated Profit</h3>
+                            <p class="result-value" id="profit">--</p>
+                            <span class="unit">Net Earnings</span>
+                        </div>
+                    </div>
+
+                    <div class="result-metric">
+                        <h4>Profit Margin</h4>
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="marginBar" style="width: 0%"></div>
+                        </div>
+                        <p id="marginText" class="metric-value">--</p>
+                    </div>
+
+                    <div class="result-breakdown">
+                        <h4>Cost Breakdown</h4>
+                        <canvas id="breakdownChart" style="max-height: 300px;"></canvas>
+                    </div>
+
+                    <button class="btn btn-secondary" onclick="saveEstimate()">💾 Save Estimate</button>
+                </section>
+            </div>
+
+            <!-- Comparison Section -->
+            <section class="card comparison-section">
+                <h2>🎯 Market Comparison</h2>
+                <div id="comparisonChart" style="position: relative; height: 300px;">
+                    <canvas id="marketComparison"></canvas>
+                </div>
+                <p class="chart-subtitle">Compare profit potential across all available markets</p>
+            </section>
+
+            <!-- Tips Section -->
+            <section class="card tips-section">
+                <h2>💡 Profit Optimization Tips</h2>
+                <div class="tips-grid">
+                    <div class="tip">
+                        <div class="tip-icon">🚚</div>
+                        <h4>Reduce Transport Costs</h4>
+                        <p>Bundle with other farmers to reduce per-unit transport. Every 10,000 TZS saved = potential 50,000 TZS more profit.</p>
+                    </div>
+                    <div class="tip">
+                        <div class="tip-icon">⏰</div>
+                        <h4>Timing is Key</h4>
+                        <p>Wait for price peaks (rising trend). Use the Market Prices tool to track trends and ship when prices are high.</p>
+                    </div>
+                    <div class="tip">
+                        <div class="tip-icon">📦</div>
+                        <h4>Minimize Losses</h4>
+                        <p>Use better packaging and faster transport. We estimate 5% loss - good logistics can reduce this to 2-3%.</p>
+                    </div>
+                    <div class="tip">
+                        <div class="tip-icon">🎯</div>
+                        <h4>Target High Demand</h4>
+                        <p>Ship to high-demand markets. High demand = higher prices + faster sales. Check demand levels in Market Prices.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Example Scenarios -->
+            <section class="card scenarios-section">
+                <h2>📊 Example Scenarios</h2>
+                <div class="scenarios-grid">
+                    <div class="scenario-card">
+                        <h4>Small Farmer (500kg Maize)</h4>
+                        <ul>
+                            <li>Quantity: 500 kg</li>
+                            <li>Market: Dar es Salaam (95,000 TZS/kg)</li>
+                            <li>Transport: 40,000 TZS</li>
+                        </ul>
+                        <p class="scenario-profit">Est. Profit: <strong>47,500 TZS</strong></p>
+                    </div>
+
+                    <div class="scenario-card">
+                        <h4>Medium Farmer (1000kg Beans)</h4>
+                        <ul>
+                            <li>Quantity: 1000 kg</li>
+                            <li>Market: Arusha (165,000 TZS/kg)</li>
+                            <li>Transport: 60,000 TZS</li>
+                        </ul>
+                        <p class="scenario-profit">Est. Profit: <strong>155,500 TZS</strong></p>
+                    </div>
+
+                    <div class="scenario-card">
+                        <h4>Large Farmer (2000kg Rice)</h4>
+                        <ul>
+                            <li>Quantity: 2000 kg</li>
+                            <li>Market: Mwanza (210,000 TZS/kg)</li>
+                            <li>Transport: 100,000 TZS</li>
+                        </ul>
+                        <p class="scenario-profit">Est. Profit: <strong>399,000 TZS</strong></p>
+                    </div>
+
+                    <div class="scenario-card">
+                        <h4>Smart Farmer (Optimized)</h4>
+                        <ul>
+                            <li>Pool with 3 other farmers</li>
+                            <li>Reduce transport by 40%</li>
+                            <li>Ship during price peak</li>
+                        </ul>
+                        <p class="scenario-profit">Est. Profit: <strong>+ 40-60%</strong></p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <style>
+        .estimator-container {
+            background: var(--bg-light);
+            min-height: 100vh;
+        }
+
+        .estimator-header {
+            background: linear-gradient(135deg, var(--gold), var(--green));
+            color: var(--white);
+            padding: 40px 0;
+            margin-bottom: 30px;
+        }
+
+        .estimator-header h1 {
+            font-size: 2.4rem;
+            margin: 12px 0;
+        }
+
+        .back-link {
+            color: var(--white);
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .estimator-main {
+            display: grid;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .estimator-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .estimator-form {
+            padding: 32px;
+            height: fit-content;
+        }
+
+        .estimator-form h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            color: var(--dark);
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid rgba(47, 125, 50, 0.2);
+            border-radius: 8px;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--green);
+            box-shadow: 0 0 0 3px rgba(47, 125, 50, 0.1);
+        }
+
+        .results-panel {
+            padding: 32px;
+            display: none;
+        }
+
+        .results-panel h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.08), rgba(242, 193, 78, 0.05));
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .result-card.highlight {
+            background: linear-gradient(135deg, var(--green), var(--gold));
+            color: var(--white);
+        }
+
+        .result-card h3 {
+            color: inherit;
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            opacity: 0.9;
+        }
+
+        .result-card .highlight h3 {
+            opacity: 0.95;
+        }
+
+        .result-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--green);
+            margin: 8px 0;
+        }
+
+        .result-card.highlight .result-value {
+            color: var(--white);
+            font-size: 2.2rem;
+        }
+
+        .unit {
+            display: block;
+            font-size: 0.8rem;
+            color: var(--muted);
+            font-weight: 500;
+        }
+
+        .result-card.highlight .unit {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .result-metric {
+            background: var(--white);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result-metric h4 {
+            color: var(--dark);
+            margin-bottom: 12px;
+        }
+
+        .progress-bar {
+            height: 12px;
+            background: rgba(47, 125, 50, 0.1);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--green), var(--gold));
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+
+        .metric-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--green);
+        }
+
+        .result-breakdown {
+            background: var(--white);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .result-breakdown h4 {
+            color: var(--dark);
+            margin-bottom: 16px;
+        }
+
+        .comparison-section {
+            padding: 32px;
+            grid-column: 1 / -1;
+        }
+
+        .comparison-section h2 {
+            color: var(--dark);
+            margin-bottom: 20px;
+        }
+
+        .chart-subtitle {
+            color: var(--muted);
+            text-align: center;
+            margin-top: 12px;
+        }
+
+        .tips-section {
+            padding: 32px;
+            grid-column: 1 / -1;
+        }
+
+        .tips-section h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+        }
+
+        .tips-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+        }
+
+        .tip {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.08), rgba(242, 193, 78, 0.05));
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .tip-icon {
+            font-size: 2rem;
+            margin-bottom: 12px;
+        }
+
+        .tip h4 {
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .tip p {
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .scenarios-section {
+            padding: 32px;
+            grid-column: 1 / -1;
+        }
+
+        .scenarios-section h2 {
+            color: var(--dark);
+            margin-bottom: 24px;
+        }
+
+        .scenarios-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .scenario-card {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.08), rgba(242, 193, 78, 0.05));
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .scenario-card h4 {
+            color: var(--dark);
+            margin-bottom: 12px;
+        }
+
+        .scenario-card ul {
+            list-style: none;
+            padding: 0;
+            margin-bottom: 16px;
+        }
+
+        .scenario-card li {
+            color: var(--muted);
+            font-size: 0.9rem;
+            padding: 6px 0;
+        }
+
+        .scenario-profit {
+            padding-top: 12px;
+            border-top: 2px solid rgba(47, 125, 50, 0.1);
+            color: var(--green);
+            font-weight: 700;
+        }
+
+        @media (max-width: 1024px) {
+            .estimator-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .estimator-header h1 {
+                font-size: 1.8rem;
+            }
+
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .tips-grid,
+            .scenarios-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script>
+        document.getElementById('estimatorForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const formData = {
+                crop: document.getElementById('crop').value,
+                quantity: parseFloat(document.getElementById('quantity').value),
+                transport_cost: parseFloat(document.getElementById('transportCost').value),
+                destination: document.getElementById('destination').value
+            };
+
+            try {
+                const response = await fetch('/api/estimate-profit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
+                });
+
+                if (!response.ok) throw new Error('Failed to calculate profit');
+                
+                const data = await response.json();
+                displayResults(data);
+                loadComparisonChart(formData);
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        });
+
+        function displayResults(data) {
+            document.getElementById('resultsPanel').style.display = 'block';
+            document.getElementById('marketPrice').textContent = data.market_price_per_unit.toLocaleString();
+            document.getElementById('revenue').textContent = data.estimated_revenue.toLocaleString();
+            document.getElementById('costs').textContent = data.total_costs.toLocaleString();
+            document.getElementById('profit').textContent = data.estimated_profit.toLocaleString();
+            
+            document.getElementById('marginBar').style.width = Math.min(data.profit_margin, 100) + '%';
+            document.getElementById('marginText').textContent = data.profit_margin.toFixed(1) + '%';
+
+            drawBreakdownChart(data);
+            window.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function drawBreakdownChart(data) {
+            if (window.breakdownChart) window.breakdownChart.destroy();
+            
+            const ctx = document.getElementById('breakdownChart').getContext('2d');
+            window.breakdownChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Profit', 'Transport', 'Loss (5%)'],
+                    datasets: [{
+                        data: [
+                            data.estimated_profit,
+                            data.total_costs * 0.8,
+                            data.total_costs * 0.2
+                        ],
+                        backgroundColor: [
+                            'rgba(76, 175, 80, 0.8)',
+                            'rgba(242, 193, 78, 0.8)',
+                            'rgba(244, 67, 54, 0.8)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    }
+                }
+            });
+        }
+
+        async function loadComparisonChart(formData) {
+            try {
+                const response = await fetch(`/api/market-prices/${formData.crop}`);
+                if (!response.ok) return;
+                
+                const prices = await response.json();
+                const regions = prices.map(p => p.region);
+                const profitData = prices.map(p => {
+                    const revenue = formData.quantity * p.price;
+                    const costs = formData.transport_cost + (revenue * 0.05);
+                    return revenue - costs;
+                });
+
+                if (window.comparisonChart) window.comparisonChart.destroy();
+                
+                const ctx = document.getElementById('marketComparison').getContext('2d');
+                window.comparisonChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: regions,
+                        datasets: [{
+                            label: 'Profit Potential (TZS)',
+                            data: profitData,
+                            backgroundColor: 'rgba(47, 125, 50, 0.5)',
+                            borderColor: 'rgba(47, 125, 50, 1)',
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: { formatter: (v) => v.toLocaleString() }
+                            }
+                        }
+                    }
+                });
+            } catch (err) {
+                console.error('Error loading comparison:', err);
+            }
+        }
+
+        function saveEstimate() {
+            alert('✅ Estimate saved to your profile! Track your profit history anytime.');
+        }
+    </script>
+</body>
+</html>

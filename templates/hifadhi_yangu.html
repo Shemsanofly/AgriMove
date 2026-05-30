@@ -1,0 +1,184 @@
+{% extends "dashboard_base.html" %}
+
+{% block content %}
+<div class="container" style="max-width: 1100px; padding: 20px 0;">
+    <!-- GPS Banner -->
+    <div id="gps-banner" style="background: rgba(47,125,50,0.08); border: 1px dashed var(--green); border-radius: 12px; padding: 14px; margin-bottom: 24px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <span style="font-size: 0.9rem; color: var(--green-dark); font-weight: 600;">
+            📍 Ruhusu GPS kwenye kivinjari chako ili kupata ghala za karibu na kuhesabu umbali.
+        </span>
+        <button onclick="requestGPS()" class="btn btn-outline" style="border-radius: 20px; padding: 6px 14px; font-size: 0.8rem; cursor: pointer; font-weight: 700;">
+            Mruhusu Sasa
+        </button>
+    </div>
+
+    <!-- Filter Actions -->
+    <div style="margin-bottom: 30px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px;">
+        <div>
+            <label style="font-weight: 700; font-size: 0.85rem; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 6px;">Chuja kwa Mkoa:</label>
+            <select id="regionSelect" onchange="filterRegion()" style="width: 100%; border: 2px solid var(--green); border-radius: 12px; padding: 14px; font-size: 1.1rem; font-weight: 600; background: var(--card-bg); color: var(--text); cursor: pointer;">
+                <option value="">Mikoa Yote</option>
+                {% for r in regions %}
+                    <option value="{{ r }}">{{ r }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label style="font-weight: 700; font-size: 0.85rem; color: var(--muted); text-transform: uppercase; display: block; margin-bottom: 6px;">Tafuta jina la ghala:</label>
+            <input type="text" id="storageSearch" placeholder="Andika hapa kutafuta..." oninput="filterRegion()" style="width: 100%; border: 2px solid var(--green); border-radius: 12px; padding: 14px; font-size: 1.1rem; font-weight: 600; background: var(--card-bg); color: var(--text);">
+        </div>
+    </div>
+
+    <!-- Card Grid -->
+    <div id="storage-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 24px;">
+        {% if facilities %}
+            {% for g in facilities %}
+                <div class="storage-card" data-region="{{ g.region | lower }}" data-name="{{ g.name | lower }}" style="background: var(--card-bg); border: 2px solid rgba(47, 125, 50, 0.15); border-radius: 16px; padding: 22px; box-shadow: var(--shadow); position: relative; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
+                    <div>
+                        <!-- Region & WRS badge header -->
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid rgba(0,0,0,0.06); padding-bottom: 8px;">
+                            <span style="font-weight: 700; color: var(--green); font-size: 0.8rem; text-transform: uppercase;">📍 {{ g.region }}</span>
+                            {% if g.accepts_wrs == 1 %}
+                                <span style="background: linear-gradient(135deg, var(--green), var(--green-dark)); color: white; padding: 3px 8px; border-radius: 6px; font-size: 0.7rem; font-weight: 700;">WRS KIKAMILIFU</span>
+                            {% endif %}
+                        </div>
+
+                        <!-- Distance placeholder -->
+                        <div class="distance-badge" id="distance-{{ g.id }}" style="display: none; background: #fff3cd; color: #856404; padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; font-weight: 700; margin-bottom: 12px;"></div>
+
+                        <!-- Facility Name -->
+                        <h3 style="color: var(--dark); font-size: 1.25rem; font-weight: 700; margin: 0 0 4px 0;">{{ g.name }}</h3>
+                        <div style="font-size: 0.85rem; color: var(--muted); font-weight: 600; margin-bottom: 16px;">
+                            Kijiji: {{ g.village }} | Wilaya: {{ g.district }}
+                        </div>
+
+                        <!-- Capacity calculations -->
+                        {% set used = g.capacity_tons - g.available_tons %}
+                        {% set pct = (used / g.capacity_tons * 100) | int %}
+                        <div style="margin-bottom: 20px;">
+                            <div style="display: flex; justify-content: space-between; font-size: 0.8rem; color: var(--muted); font-weight: 600; margin-bottom: 6px;">
+                                <span>Uwezo uliotumika:</span>
+                                <strong>{{ used | int }} / {{ g.capacity_tons | int }} Tani ({{ pct }}%)</strong>
+                            </div>
+                            
+                            <!-- Capacity progress bar -->
+                            <div style="height: 10px; background: rgba(0,0,0,0.05); border-radius: 99px; overflow: hidden;">
+                                <div style="width: {{ pct }}%; height: 100%; background: {% if pct > 85 %}#c62828{% elif pct > 60 %}#ffb300{% else %}#2e7d32{% endif %}; border-radius: 99px;"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Cost + Call action footer -->
+                    <div style="border-top: 1px dashed rgba(0,0,0,0.08); padding-top: 14px; margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <small style="color: var(--muted); display: block; font-size: 0.75rem; text-transform: uppercase; font-weight: 700;">Gharama ya Hifadhi:</small>
+                            <span style="font-size: 1.1rem; font-weight: 800; color: var(--green);">TSh {{ "{:,.0f}".format(g.cost_per_bag_per_month_tzs) }}</span>
+                            <small style="color: var(--muted); font-size: 0.75rem;">/ mfuko / mwezi</small>
+                        </div>
+                        <a href="tel:{{ g.contact_phone }}" class="btn btn-outline" style="border-radius: 30px; padding: 8px 16px; font-size: 0.8rem; font-weight: 700; display: flex; align-items: center; gap: 6px; border-color: var(--green); color: var(--green);">
+                            📞 Piga Simu
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div style="grid-column: 1/-1; text-align: center; padding: 40px; background: var(--card-bg); border-radius: 12px;">
+                <p style="font-size: 1.2rem; color: var(--muted);">Hakuna maghala yaliyopatikana.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<script>
+    function filterRegion() {
+        const selectVal = document.getElementById('regionSelect').value.toLowerCase();
+        const searchVal = document.getElementById('storageSearch').value.toLowerCase().strip ? document.getElementById('storageSearch').value.toLowerCase().strip() : document.getElementById('storageSearch').value.toLowerCase();
+        const cards = document.querySelectorAll('.storage-card');
+
+        cards.forEach(card => {
+            const r = card.getAttribute('data-region');
+            const name = card.getAttribute('data-name');
+            
+            const matchesRegion = selectVal === "" || r === selectVal;
+            const matchesSearch = name.includes(searchVal);
+
+            if (matchesRegion && matchesSearch) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // Geolocation triggering
+    function requestGPS() {
+        if (!navigator.geolocation) {
+            alert("Kivinjari chako hakiauni huduma ya GPS (Geolocation).");
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(position => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            
+            fetch(`/api/storage/nearest?lat=${lat}&lng=${lng}`)
+                .then(res => res.json())
+                .then(res => {
+                    if (res.success) {
+                        reorderCards(res.data);
+                        document.getElementById('gps-banner').innerHTML = `
+                            <span style="font-size: 0.9rem; color: var(--green-dark); font-weight: 600;">
+                                ✅ Maghala yamepangwa kwa kufuata umbali kutoka mahali ulipo.
+                            </span>
+                        `;
+                    }
+                })
+                .catch(err => {
+                    alert("Imeshindikana kupanga ghala kwa kufuata GPS.");
+                    console.error(err);
+                });
+        }, err => {
+            alert("Ruhusa ya eneo ilikataliwa au ilishindikana kupatikana.");
+        });
+    }
+
+    function reorderCards(data) {
+        const grid = document.getElementById('storage-grid');
+        const cardsMap = {};
+        
+        // Find existing cards in DOM
+        document.querySelectorAll('.storage-card').forEach(card => {
+            // We can identify cards using name matching or we can rebuild cards
+            const nameAttr = card.getAttribute('data-name');
+            cardsMap[nameAttr] = card;
+        });
+
+        grid.innerHTML = '';
+        
+        data.forEach(item => {
+            const nameLower = item.name.toLowerCase();
+            const existingCard = cardsMap[nameLower];
+            if (existingCard) {
+                // Show distance badge
+                const db = existingCard.querySelector('.distance-badge');
+                if (db) {
+                    db.textContent = `📍 Umbali: ${item.distance_km} Km kutoka ulipo`;
+                    db.style.display = 'inline-block';
+                }
+                grid.appendChild(existingCard);
+            }
+        });
+    }
+
+    // Automatically check on load if permission is already granted
+    window.addEventListener('load', () => {
+        if (navigator.permissions) {
+            navigator.permissions.query({ name: 'geolocation' }).then(result => {
+                if (result.state === 'granted') {
+                    requestGPS();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

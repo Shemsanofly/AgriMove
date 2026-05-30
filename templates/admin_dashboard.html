@@ -1,0 +1,195 @@
+{% extends "dashboard_base.html" %}
+
+{% block content %}
+  <div id="admin-dashboard" data-active-tab="{{ active_tab }}">
+    <section class="dashboard-grid admin-top-grid">
+      <div class="card stat-card">
+        <h3>{{ t("admin_drivers") }}</h3>
+        <p class="stat-value">{{ active_drivers }}</p>
+      </div>
+      <div class="card stat-card">
+        <h3>{{ t("admin_fleet") }}</h3>
+        <p class="stat-value">{{ fleet_availability_pct }}%</p>
+      </div>
+    </section>
+
+    <div class="admin-toolbar">
+      <div class="admin-tabs">
+        <button class="admin-tab-btn{% if active_tab == 'prices' %} active{% endif %}" id="btn-prices-tab" type="button" data-tab="prices-tab">{{ t("admin_prices_tab") }}</button>
+        <button class="admin-tab-btn{% if active_tab == 'buyers' %} active{% endif %}" id="btn-buyers-tab" type="button" data-tab="buyers-tab">{{ t("admin_buyers_tab") }}</button>
+      </div>
+      <button id="darkModeToggle" class="btn btn-ghost btn-micro" type="button" aria-label="Theme">◐</button>
+    </div>
+
+    <div id="prices-tab" class="admin-tab-panel{% if active_tab == 'prices' %} active{% endif %}">
+      <section class="card form-card">
+        <h3>{{ t("admin_add_price") }}</h3>
+        <form method="post" action="/admin/prices/add" class="dashboard-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="crop_name">{{ t("admin_crop") }}</label>
+              <input type="text" id="crop_name" name="crop_name" required />
+            </div>
+            <div class="form-group">
+              <label for="region">{{ t("admin_region") }}</label>
+              <input type="text" id="region" name="region" required />
+            </div>
+            <div class="form-group">
+              <label for="price">{{ t("admin_price") }}</label>
+              <input type="number" id="price" name="price" required />
+            </div>
+            <div class="form-group">
+              <label for="demand_level">{{ t("admin_demand") }}</label>
+              <select id="demand_level" name="demand_level">
+                <option value="Low">{{ status_label("Low") }}</option>
+                <option value="Medium" selected>{{ status_label("Medium") }}</option>
+                <option value="High">{{ status_label("High") }}</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="trend">{{ t("admin_trend") }}</label>
+              <select id="trend" name="trend">
+                <option value="Stable" selected>{{ status_label("Stable") }}</option>
+                <option value="Rising">{{ status_label("Rising") }}</option>
+                <option value="Falling">{{ status_label("Falling") }}</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn btn-primary" type="submit">{{ t("admin_add") }}</button>
+        </form>
+      </section>
+
+      <section class="admin-price-grid">
+        {% for p in prices %}
+          <div class="card admin-price-card">
+            <div class="admin-price-card__header">
+              <div>
+                <h3>{{ p.crop_name }}</h3>
+                <p class="muted-text">{{ p.region }}</p>
+              </div>
+              <p class="admin-price-card__value">{{ p.price|int }} <span>TZS</span></p>
+            </div>
+            <div class="admin-price-card__badges">
+              <span class="status-badge status-{{ p.demand_level|lower }}">{{ status_label(p.demand_level) }}</span>
+              <span class="status-badge status-{{ p.trend|lower|replace(' ', '-') }}">{{ status_label(p.trend) }}</span>
+            </div>
+            <form method="post" action="/admin/prices/edit" class="admin-price-card__edit dashboard-form">
+              <input type="hidden" name="price_id" value="{{ p.id }}" />
+              <div class="form-row">
+                <div class="form-group">
+                  <label>{{ t("admin_price") }}</label>
+                  <input type="number" name="price" value="{{ p.price|int }}" required />
+                </div>
+                <div class="form-group">
+                  <label>{{ t("admin_demand") }}</label>
+                  <select name="demand_level">
+                    <option value="Low" {% if p.demand_level == 'Low' %}selected{% endif %}>{{ status_label("Low") }}</option>
+                    <option value="Medium" {% if p.demand_level == 'Medium' %}selected{% endif %}>{{ status_label("Medium") }}</option>
+                    <option value="High" {% if p.demand_level == 'High' %}selected{% endif %}>{{ status_label("High") }}</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label>{{ t("admin_trend") }}</label>
+                  <select name="trend">
+                    <option value="Stable" {% if p.trend == 'Stable' %}selected{% endif %}>{{ status_label("Stable") }}</option>
+                    <option value="Rising" {% if p.trend == 'Rising' %}selected{% endif %}>{{ status_label("Rising") }}</option>
+                    <option value="Falling" {% if p.trend == 'Falling' %}selected{% endif %}>{{ status_label("Falling") }}</option>
+                  </select>
+                </div>
+              </div>
+              <div class="admin-price-card__actions">
+                <button type="submit" class="btn btn-primary btn-micro">{{ t("admin_save") }}</button>
+                <button type="submit" class="btn btn-ghost btn-micro" formaction="/admin/prices/delete/{{ p.id }}" formmethod="post" onclick="return confirm('{{ t('admin_delete') }}?');">{{ t("admin_delete") }}</button>
+              </div>
+            </form>
+          </div>
+        {% endfor %}
+
+        {% for slot in range(price_slots - prices|length) %}
+          <div class="card admin-price-card admin-price-card--empty">
+            <p class="muted-text">{{ t("admin_empty") }}</p>
+          </div>
+        {% endfor %}
+      </section>
+    </div>
+
+    <div id="buyers-tab" class="admin-tab-panel{% if active_tab == 'buyers' %} active{% endif %}">
+      <section class="card table-card">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ t("admin_buyer") }}</th>
+                <th>{{ t("admin_phone") }}</th>
+                <th>{{ t("admin_rating") }}</th>
+                <th>{{ t("admin_status") }}</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if buyers %}
+                {% for b in buyers %}
+                  <tr>
+                    <td>{{ b.buyer_name }}</td>
+                    <td>{{ b.phone }}</td>
+                    <td>{{ b.rating }}</td>
+                    <td>
+                      <span class="status-badge status-{% if b.verification_status == 'Verified' %}accepted{% else %}pending{% endif %}">
+                        {{ status_label(b.verification_status) }}
+                      </span>
+                    </td>
+                    <td>
+                      <form method="post" action="/admin/buyers/verify/{{ b.id }}" style="display:inline;">
+                        {% if b.verification_status == 'Verified' %}
+                          <input type="hidden" name="status" value="Pending" />
+                          <button type="submit" class="btn btn-micro btn-outline">{{ t("admin_revoke") }}</button>
+                        {% else %}
+                          <input type="hidden" name="status" value="Verified" />
+                          <button type="submit" class="btn btn-micro btn-primary">{{ t("admin_verify") }}</button>
+                        {% endif %}
+                      </form>
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="5" class="empty-state">{{ t("admin_none") }}</td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card table-card" style="margin-top: 20px;">
+        <h3>{{ t("admin_drivers") }}</h3>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>{{ t("admin_driver") }}</th>
+                <th>{{ t("admin_phone") }}</th>
+                <th>{{ t("admin_status") }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for driver in drivers %}
+                <tr>
+                  <td>{{ driver["name"] }}</td>
+                  <td>{{ driver["phone"] }}</td>
+                  <td>
+                    <span class="status-badge status-{{ driver['availability'] }}">
+                      {{ status_label(driver["availability"]) }}
+                    </span>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Invoice #{{ invoice.id }} - AgriMove AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+    <div class="invoice-container">
+        <header class="invoice-header no-print">
+            <div class="container">
+                <a href="/" class="back-link">← Back</a>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" onclick="window.print()">🖨️ Print</button>
+                    <button class="btn btn-secondary" onclick="downloadPDF()">📥 Download PDF</button>
+                </div>
+            </div>
+        </header>
+
+        <main class="container invoice-main">
+            <div class="invoice-document">
+                <!-- Logo & Company Info -->
+                <div class="invoice-top">
+                    <div class="company-info">
+                        <h1 class="company-name">🌾 AgriMove AI</h1>
+                        <p>Smart Rural Logistics Platform</p>
+                        <p>Contact: +233 XXX XXX XXX</p>
+                        <p>Email: support@agrimove.ai</p>
+                    </div>
+                    <div class="invoice-number">
+                        <h2>Invoice</h2>
+                        <p class="number">#{{ invoice.id }}</p>
+                        <p class="date">{{ invoice.date }}</p>
+                    </div>
+                </div>
+
+                <!-- From/To Section -->
+                <div class="invoice-parties">
+                    <div class="party">
+                        <h4>From:</h4>
+                        <p><strong>{{ driver.name }}</strong></p>
+                        <p>Driver ID: {{ driver.id }}</p>
+                        <p>{{ driver.phone }}</p>
+                        <p>Vehicle: {{ driver.vehicle_type|upper }}</p>
+                    </div>
+                    <div class="party">
+                        <h4>To:</h4>
+                        <p><strong>{{ farmer.name }}</strong></p>
+                        <p>Farmer ID: {{ farmer.id }}</p>
+                        <p>{{ farmer.phone }}</p>
+                        <p>Location: {{ request.pickup_location }}</p>
+                    </div>
+                </div>
+
+                <!-- Delivery Details -->
+                <div class="invoice-details">
+                    <h3>Delivery Information</h3>
+                    <div class="details-grid">
+                        <div class="detail">
+                            <span class="label">Pickup Location:</span>
+                            <span class="value">{{ request.pickup_location }}</span>
+                        </div>
+                        <div class="detail">
+                            <span class="label">Destination:</span>
+                            <span class="value">{{ request.destination }}</span>
+                        </div>
+                        <div class="detail">
+                            <span class="label">Goods Type:</span>
+                            <span class="value">{{ request.goods_type }}</span>
+                        </div>
+                        <div class="detail">
+                            <span class="label">Quantity:</span>
+                            <span class="value">{{ request.quantity }}</span>
+                        </div>
+                        <div class="detail">
+                            <span class="label">Distance:</span>
+                            <span class="value">{{ request.distance_km }} km</span>
+                        </div>
+                        <div class="detail">
+                            <span class="label">Delivery Time:</span>
+                            <span class="value">{{ request.actual_time or request.eta_minutes }} minutes</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Itemized Charges -->
+                <div class="invoice-table">
+                    <h3>Charges</h3>
+                    <table class="invoice-items">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Rate</th>
+                                <th>Quantity</th>
+                                <th class="amount">Amount (GHS)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>Base Delivery Fee</td>
+                                <td>₵5.00</td>
+                                <td>1</td>
+                                <td class="amount">₵5.00</td>
+                            </tr>
+                            <tr>
+                                <td>Distance Charge ({{ request.distance_km }} km × ₵2.50/km)</td>
+                                <td>₵2.50</td>
+                                <td>{{ request.distance_km }}</td>
+                                <td class="amount">₵{{ "%.2f"|format(request.distance_km * 2.50) }}</td>
+                            </tr>
+                            {% if request.surge_pricing %}
+                                <tr>
+                                    <td>Peak Hours Surcharge (20%)</td>
+                                    <td colspan="2">Surge</td>
+                                    <td class="amount">₵{{ "%.2f"|format(request.price * 0.20) }}</td>
+                                </tr>
+                            {% endif %}
+                            <tr class="subtotal-row">
+                                <td colspan="3"><strong>Subtotal</strong></td>
+                                <td class="amount"><strong>₵{{ "%.2f"|format(request.price) }}</strong></td>
+                            </tr>
+                            <tr>
+                                <td colspan="3"><strong>Tax (5%)</strong></td>
+                                <td class="amount"><strong>₵{{ "%.2f"|format(request.price * 0.05) }}</strong></td>
+                            </tr>
+                            <tr class="total-row">
+                                <td colspan="3"><strong>Total Amount Due</strong></td>
+                                <td class="amount"><strong>₵{{ "%.2f"|format(request.price * 1.05) }}</strong></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Rating & Review -->
+                {% if request.rating %}
+                    <div class="invoice-rating">
+                        <h3>Delivery Rating</h3>
+                        <div class="rating-display">
+                            {% for i in range(5) %}
+                                <span class="star {% if i < request.rating %}filled{% endif %}">★</span>
+                            {% endfor %}
+                            <span class="rating-value">{{ request.rating }} / 5.0</span>
+                        </div>
+                        {% if request.review %}
+                            <p class="review"><strong>Review:</strong> "{{ request.review }}"</p>
+                        {% endif %}
+                    </div>
+                {% endif %}
+
+                <!-- Terms & Signatures -->
+                <div class="invoice-footer">
+                    <div class="signature-section">
+                        <div class="signature">
+                            <p class="signature-line">_______________________</p>
+                            <p>Driver Signature</p>
+                            <p class="date">Date: {{ invoice.date }}</p>
+                        </div>
+                        <div class="signature">
+                            <p class="signature-line">_______________________</p>
+                            <p>Farmer Signature</p>
+                            <p class="date">Date: {{ invoice.date }}</p>
+                        </div>
+                    </div>
+
+                    <div class="terms">
+                        <h4>Terms & Conditions</h4>
+                        <ul>
+                            <li>Payment is due within 48 hours of delivery completion</li>
+                            <li>Disputes must be reported within 24 hours of delivery</li>
+                            <li>AgriMove AI charges a 2% transaction fee on all payments</li>
+                            <li>For support: +233 XXX XXX XXX or support@agrimove.ai</li>
+                        </ul>
+                    </div>
+
+                    <p class="footer-text">
+                        Thank you for using AgriMove AI - Connecting Farmers with Drivers
+                    </p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <style>
+        .invoice-container {
+            background: var(--bg-light);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+
+        .invoice-header {
+            background: var(--white);
+            padding: 20px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .invoice-header .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+        }
+
+        .back-link {
+            color: var(--dark);
+            font-weight: 600;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .invoice-main {
+            margin-bottom: 40px;
+        }
+
+        .invoice-document {
+            background: var(--white);
+            border-radius: 14px;
+            padding: 48px;
+            box-shadow: var(--shadow);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .invoice-top {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            padding-bottom: 24px;
+            border-bottom: 2px solid rgba(47, 125, 50, 0.2);
+        }
+
+        .company-name {
+            color: var(--green);
+            font-size: 1.8rem;
+            margin-bottom: 8px;
+        }
+
+        .invoice-number h2 {
+            text-align: right;
+            font-size: 1.6rem;
+            color: var(--dark);
+        }
+
+        .invoice-number .number {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--green);
+        }
+
+        .invoice-number .date {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .invoice-parties {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 32px;
+            margin-bottom: 32px;
+            padding: 24px 0;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .party h4 {
+            color: var(--dark);
+            margin-bottom: 12px;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .party p {
+            color: var(--muted);
+            margin: 4px 0;
+            font-size: 0.95rem;
+        }
+
+        .invoice-details {
+            background: rgba(47, 125, 50, 0.05);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 32px;
+        }
+
+        .invoice-details h3 {
+            color: var(--dark);
+            margin-bottom: 16px;
+        }
+
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .detail {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .detail .label {
+            font-weight: 600;
+            color: var(--muted);
+        }
+
+        .detail .value {
+            color: var(--dark);
+            font-weight: 500;
+        }
+
+        .invoice-table {
+            margin-bottom: 32px;
+        }
+
+        .invoice-table h3 {
+            color: var(--dark);
+            margin-bottom: 16px;
+        }
+
+        .invoice-items {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .invoice-items thead {
+            background: rgba(47, 125, 50, 0.1);
+        }
+
+        .invoice-items th {
+            padding: 12px;
+            text-align: left;
+            color: var(--dark);
+            font-weight: 700;
+            border-bottom: 2px solid rgba(47, 125, 50, 0.3);
+        }
+
+        .invoice-items th.amount {
+            text-align: right;
+        }
+
+        .invoice-items td {
+            padding: 12px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            color: var(--dark);
+        }
+
+        .invoice-items td.amount {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .subtotal-row {
+            background: rgba(47, 125, 50, 0.05);
+        }
+
+        .total-row {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.1), rgba(242, 193, 78, 0.05));
+            font-size: 1.1rem;
+        }
+
+        .invoice-rating {
+            background: rgba(242, 193, 78, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 32px;
+        }
+
+        .rating-display {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .rating-display .star {
+            font-size: 1.4rem;
+            color: rgba(47, 125, 50, 0.3);
+        }
+
+        .rating-display .star.filled {
+            color: var(--gold);
+        }
+
+        .rating-value {
+            font-weight: 700;
+            color: var(--dark);
+            margin-left: 8px;
+        }
+
+        .review {
+            margin-top: 12px;
+            font-style: italic;
+            color: var(--muted);
+        }
+
+        .invoice-footer {
+            margin-top: 40px;
+            padding-top: 24px;
+            border-top: 2px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .signature-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 32px;
+        }
+
+        .signature {
+            text-align: center;
+        }
+
+        .signature-line {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            color: var(--muted);
+        }
+
+        .signature p {
+            color: var(--dark);
+            font-weight: 600;
+            margin: 4px 0;
+        }
+
+        .signature .date {
+            font-size: 0.9rem;
+            color: var(--muted);
+        }
+
+        .terms {
+            background: rgba(0, 0, 0, 0.03);
+            border-radius: 10px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .terms h4 {
+            color: var(--dark);
+            margin-bottom: 12px;
+        }
+
+        .terms ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .terms li {
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            padding-left: 16px;
+            position: relative;
+        }
+
+        .terms li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: var(--green);
+            font-weight: 700;
+        }
+
+        .footer-text {
+            text-align: center;
+            color: var(--muted);
+            font-size: 0.9rem;
+            margin-top: 16px;
+            font-style: italic;
+        }
+
+        @media print {
+            .no-print {
+                display: none;
+            }
+
+            .invoice-document {
+                box-shadow: none;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .invoice-document {
+                padding: 24px;
+            }
+
+            .invoice-parties {
+                grid-template-columns: 1fr;
+            }
+
+            .details-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .signature-section {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+        }
+    </style>
+
+    <script>
+        function downloadPDF() {
+            alert("📥 PDF download functionality coming soon! Use Print → Save as PDF for now.");
+        }
+    </script>
+</body>
+</html>

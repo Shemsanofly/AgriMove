@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buyer Offers - AgriMove AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .farmer-info {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .farmer-details h3 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .farmer-details p {
+            color: #7f8c8d;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .filter-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+            color: #2c3e50;
+        }
+
+        .filter-group input {
+            padding: 8px 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 6px;
+            font-size: 0.95em;
+        }
+
+        .offers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .offer-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 3px 15px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+        }
+
+        .offer-card:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        .offer-header {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+        }
+
+        .offer-crop {
+            font-size: 1.5em;
+            font-weight: 600;
+        }
+
+        .offer-status {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .offer-body {
+            padding: 20px;
+        }
+
+        .buyer-section {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #3498db;
+        }
+
+        .buyer-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .buyer-phone {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+
+        .verified-badge {
+            display: inline-block;
+            background: #d4edda;
+            color: #155724;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 8px;
+        }
+
+        .price-comparison {
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #fffacd;
+            border-left: 4px solid #f39c12;
+            border-radius: 6px;
+        }
+
+        .price-comparison.good {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+
+        .price-comparison.warning {
+            background: #fff3cd;
+            border-left-color: #ffc107;
+        }
+
+        .price-comparison.danger {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+
+        .price-label {
+            font-size: 0.9em;
+            color: #555;
+            margin-bottom: 8px;
+        }
+
+        .price-values {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .price-item {
+            text-align: center;
+        }
+
+        .price-item-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 5px;
+        }
+
+        .price-item-value {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .offer-details {
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 0.95em;
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .price-highlight {
+            color: #e74c3c;
+            font-size: 1.1em;
+        }
+
+        .fair-price-alert {
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+            font-weight: 500;
+        }
+
+        .fair-price-alert.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .fair-price-alert.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .fair-price-alert.warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .fair-price-alert.danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 0.95em;
+        }
+
+        .btn-accept {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .btn-accept:hover {
+            background: #27ae60;
+            transform: translateY(-2px);
+        }
+
+        .btn-accept:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-compare {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-compare:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .empty-state-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+        }
+
+        .empty-state p {
+            font-size: 1.1em;
+        }
+
+        .notification {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .notification.error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+
+        .comparison-chart {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .comparison-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .comparison-title {
+            font-size: 0.9em;
+            color: #7f8c8d;
+            margin-bottom: 8px;
+        }
+
+        .comparison-value {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .farmer-info {
+                flex-direction: column;
+                align-items: start;
+                gap: 15px;
+            }
+
+            .offers-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .price-values {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>💼 Buyer Offers For You</h1>
+            <p>Compare fair prices • Protect yourself from exploitation • Trade directly with verified buyers</p>
+        </div>
+
+        <!-- Farmer Info -->
+        <div class="farmer-info">
+            <div class="farmer-details">
+                <h3>👤 {{ farmer.name }}</h3>
+                <p>📞 {{ farmer.phone }}</p>
+            </div>
+            <div style="text-align: right; color: #7f8c8d;">
+                <p>⭐ Rating: <strong>{{ farmer.rating }}</strong></p>
+                <p>📦 Total Deliveries: <strong>{{ farmer.total_delivered }}</strong></p>
+            </div>
+        </div>
+
+        <!-- Notification Area -->
+        <div id="notificationArea"></div>
+
+        <!-- Filters -->
+        <div class="filters">
+            <div class="filter-group">
+                <label>
+                    🌾 Filter by Crop:
+                    <input type="text" id="cropFilter" placeholder="e.g., Maize, Tomatoes...">
+                </label>
+            </div>
+        </div>
+
+        <!-- Offers Grid -->
+        <div class="offers-grid" id="offersGrid">
+            <div class="empty-state">
+                <div class="empty-state-icon">📭</div>
+                <p>Loading buyer offers...</p>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" style="display: none;">
+            <div class="empty-state">
+                <div class="empty-state-icon">🎯</div>
+                <p>No matching offers found</p>
+                <p style="margin-top: 10px; font-size: 0.95em;">Check back later for new buyer demands!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Price Comparison Modal -->
+    <div class="modal" id="comparisonModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>📊 Price Comparison Analysis</span>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="comparisonBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const offersGrid = document.getElementById('offersGrid');
+        const cropFilter = document.getElementById('cropFilter');
+        const notificationArea = document.getElementById('notificationArea');
+        const emptyState = document.getElementById('emptyState');
+        let allOffers = [];
+        let farmerId = {{ farmer.id }};
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOffers();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            cropFilter.addEventListener('input', filterOffers);
+        }
+
+        function loadOffers() {
+            fetch('/api/buyer-offers')
+                .then(r => r.json())
+                .then(data => {
+                    allOffers = data;
+                    displayOffers();
+                })
+                .catch(err => {
+                    console.error('Error loading offers:', err);
+                    offersGrid.innerHTML = '<div class="empty-state"><p>Error loading offers</p></div>';
+                });
+        }
+
+        function displayOffers() {
+            const filtered = allOffers.filter(offer => {
+                const cropMatch = cropFilter.value === '' || 
+                                 offer.crop_name.toLowerCase().includes(cropFilter.value.toLowerCase());
+                return cropMatch;
+            });
+
+            if (filtered.length === 0) {
+                offersGrid.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            offersGrid.innerHTML = filtered.map(offer => createOfferCard(offer)).join('');
+        }
+
+        function filterOffers() {
+            displayOffers();
+        }
+
+        function createOfferCard(offer) {
+            return `
+                <div class="offer-card">
+                    <div class="offer-header">
+                        <div class="offer-crop">🌾 ${offer.crop_name}</div>
+                        <div class="offer-status">${offer.status}</div>
+                    </div>
+
+                    <div class="offer-body">
+                        <div class="buyer-section">
+                            <div class="buyer-name">👤 ${offer.buyer_name}</div>
+                            <div class="buyer-phone">📞 ${offer.location}</div>
+                            ${offer.verification_status === 'Verified' ? 
+                                '<div class="verified-badge">✅ Verified Buyer</div>' : 
+                                ''}
+                        </div>
+
+                        <div class="offer-details">
+                            <div class="detail-item">
+                                <span class="detail-label">Quantity Needed</span>
+                                <span class="detail-value">${offer.quantity} units</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Offered Price</span>
+                                <span class="detail-value price-highlight">${offer.offered_price.toLocaleString()}/unit</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">Total Value</span>
+                                <span class="detail-value">${(offer.quantity * offer.offered_price).toLocaleString()}</span>
+                            </div>
+                        </div>
+
+                        <div id="priceAlert-${offer.id}" style="min-height: 60px;"></div>
+
+                        <div class="action-buttons">
+                            <button class="btn btn-compare" onclick="showComparison(${offer.id})">📊 Compare Price</button>
+                            <button class="btn btn-accept" onclick="acceptOffer(${offer.id})">✅ Accept Offer</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showComparison(offerId) {
+            const offer = allOffers.find(o => o.id === offerId);
+            if (!offer) return;
+
+            // Check fair price
+            fetch('/api/fair-price-check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    crop_name: offer.crop_name,
+                    offered_price: offer.offered_price,
+                    quantity: offer.quantity,
+                    destination: 'Dar es Salaam'
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                const comparisonBody = document.getElementById('comparisonBody');
+                comparisonBody.innerHTML = `
+                    <div class="fair-price-alert ${data.alert_type}">
+                        ${data.message}
+                    </div>
+
+                    <div class="comparison-chart">
+                        <div class="comparison-item">
+                            <div class="comparison-title">Market Average</div>
+                            <div class="comparison-value" style="color: #2ecc71;">
+                                ${data.market_average_price.toLocaleString()}
+                            </div>
+                        </div>
+                        <div class="comparison-item">
+                            <div class="comparison-title">Offered Price</div>
+                            <div class="comparison-value" style="color: ${data.alert_type === 'danger' ? '#e74c3c' : '#3498db'};">
+                                ${data.offered_price.toLocaleString()}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                        <h3 style="margin-bottom: 10px; color: #2c3e50;">📈 Detailed Analysis</h3>
+                        <p style="margin-bottom: 8px;"><strong>Price Difference:</strong> ${data.difference.toLocaleString()} (${data.percentage_below.toFixed(1)}%)</p>
+                        <p style="margin-bottom: 8px;"><strong>Your Total Value:</strong> ${data.total_offered_value.toLocaleString()}</p>
+                        <p style="margin-bottom: 8px;"><strong>Market Value:</strong> ${data.total_market_value.toLocaleString()}</p>
+                        <p style="margin-bottom: 8px;"><strong>Recommended Price:</strong> ${data.recommended_price.toLocaleString()}/unit</p>
+                    </div>
+
+                    <div style="margin-top: 20px; text-align: center;">
+                        <button class="btn btn-accept" onclick="acceptOffer(${offerId})">✅ Accept This Offer</button>
+                    </div>
+                `;
+
+                document.getElementById('comparisonModal').classList.add('active');
+            })
+            .catch(err => {
+                console.error('Error checking price:', err);
+                showNotification('Error comparing prices', 'error');
+            });
+        }
+
+        function acceptOffer(offerId) {
+            const offer = allOffers.find(o => o.id === offerId);
+            if (!offer) return;
+
+            if (confirm(`Accept offer from ${offer.buyer_name} for ${offer.quantity} units of ${offer.crop_name}?`)) {
+                fetch('/api/offer/accept', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        offer_id: offerId,
+                        farmer_id: farmerId
+                    })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification('✅ Offer accepted! ' + data.message, 'success');
+                        closeModal();
+                        loadOffers();
+                    } else {
+                        showNotification('❌ Error: ' + data.error, 'error');
+                    }
+                })
+                .catch(err => {
+                    showNotification('Error accepting offer', 'error');
+                });
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('comparisonModal').classList.remove('active');
+        }
+
+        function showNotification(message, type) {
+            const div = document.createElement('div');
+            div.className = `notification ${type}`;
+            div.textContent = message;
+            notificationArea.appendChild(div);
+            
+            setTimeout(() => div.remove(), 5000);
+        }
+
+        // Load offers with price comparison on display
+        function displayOffers() {
+            const filtered = allOffers.filter(offer => {
+                const cropMatch = cropFilter.value === '' || 
+                                 offer.crop_name.toLowerCase().includes(cropFilter.value.toLowerCase());
+                return cropMatch;
+            });
+
+            if (filtered.length === 0) {
+                offersGrid.innerHTML = '';
+                emptyState.style.display = 'block';
+                return;
+            }
+
+            emptyState.style.display = 'none';
+            offersGrid.innerHTML = filtered.map(offer => createOfferCard(offer)).join('');
+
+            // Load price comparisons for each offer
+            filtered.forEach(offer => {
+                checkAndDisplayPrice(offer);
+            });
+        }
+
+        function checkAndDisplayPrice(offer) {
+            fetch('/api/fair-price-check', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    crop_name: offer.crop_name,
+                    offered_price: offer.offered_price,
+                    quantity: offer.quantity,
+                    destination: 'Dar es Salaam'
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                const alertDiv = document.getElementById(`priceAlert-${offer.id}`);
+                if (alertDiv) {
+                    alertDiv.innerHTML = `
+                        <div class="fair-price-alert ${data.alert_type}">
+                            ${data.message}
+                        </div>
+                    `;
+                }
+            })
+            .catch(err => console.error('Price check error:', err));
+        }
+    </script>
+</body>
+</html>

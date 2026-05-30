@@ -1,0 +1,142 @@
+{% extends "dashboard_base.html" %}
+
+{% block content %}
+  <section class="dashboard-grid">
+    <div class="card stat-card">
+      <h3 data-i18n="available_drivers">Available Drivers</h3>
+      <p class="stat-value">{{ available_drivers }}</p>
+      <span data-i18n="ready_assignments">Ready for assignments</span>
+    </div>
+    <div class="card stat-card">
+      <h3 data-i18n="busy_drivers">Busy Drivers</h3>
+      <p class="stat-value">{{ busy_drivers }}</p>
+      <span data-i18n="on_deliveries">Currently on deliveries</span>
+    </div>
+    <div class="card stat-card">
+      <h3 data-i18n="pending_requests">Pending Requests</h3>
+      <p class="stat-value">{{ counts["Pending"] }}</p>
+      <span data-i18n="awaiting_acceptance">Awaiting acceptance</span>
+    </div>
+    <div class="card stat-card">
+      <h3 data-i18n="in_transit">In Transit</h3>
+      <p class="stat-value">{{ counts["In Transit"] }}</p>
+      <span data-i18n="active_deliveries">Active deliveries</span>
+    </div>
+    <div class="card ai-card">
+      <h3 data-i18n="ai_route_active">AI Route Optimization Active</h3>
+      <p data-i18n="driver_ai_desc">Drivers receive optimized routes and dynamic ETA updates.</p>
+    </div>
+  </section>
+
+  <section class="dashboard-two">
+    <div class="card table-card">
+      <div class="table-header">
+        <h3 data-i18n="available_requests">Available Requests</h3>
+        <span data-i18n="accept_jobs_desc">Accept, start, and complete delivery jobs</span>
+      </div>
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th data-i18n="th_request">Request</th>
+              <th data-i18n="th_farmer">Farmer</th>
+              <th data-i18n="th_pickup">Pickup</th>
+              <th data-i18n="th_destination">Destination</th>
+              <th data-i18n="th_status">Status</th>
+              <th data-i18n="th_eta">ETA</th>
+              <th data-i18n="th_actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if requests %}
+              {% for req in requests %}
+                <tr>
+                  <td>#{{ req["id"] }}</td>
+                  <td>{{ req["farmer_name"] }}</td>
+                  <td>{{ req["pickup_location"] }}</td>
+                  <td>{{ req["destination"] }}</td>
+                  <td>
+                    <span class="status-badge i18n-status" data-status="{{ req['status'] }}">
+                      {{ req["status"] }}
+                    </span>
+                  </td>
+                  <td>{% if req["eta_minutes"] %}{{ req["eta_minutes"] }}{% else %}<span data-i18n="tbd">TBD</span>{% endif %}</td>
+                  <td>
+                    <div class="action-buttons">
+                      {% if req["status"] == "Pending" %}
+                        <form method="post" action="{{ url_for('accept_job', request_id=req['id']) }}">
+                          <button class="btn btn-outline btn-small" type="submit" data-i18n="btn_accept_job">Accept Job</button>
+                        </form>
+                      {% elif req["status"] == "Accepted" %}
+                        <form method="post" action="{{ url_for('start_delivery', request_id=req['id']) }}">
+                          <button class="btn btn-primary btn-small" type="submit" data-i18n="btn_start_delivery">Start Delivery</button>
+                        </form>
+                      {% elif req["status"] == "In Transit" %}
+                        <form method="post" action="{{ url_for('mark_delivered', request_id=req['id']) }}">
+                          <button class="btn btn-ghost btn-small" type="submit" data-i18n="btn_mark_delivered">Mark Delivered</button>
+                        </form>
+                      {% else %}
+                        <span class="muted-text" data-i18n="completed_short">Completed</span>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="7" class="empty-state" data-i18n="no_requests_available">No requests available yet.</td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card notification-panel">
+      <h3 data-i18n="notifications">Notifications</h3>
+      <div class="notification-list">
+        {% if notifications %}
+          {% for note in notifications %}
+            <div class="notification-card">
+              <p>{{ note["message"] }}</p>
+              <span>{{ note["created_at"] }}</span>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p class="muted-text" data-i18n="no_notifications">No notifications yet.</p>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+
+  <section class="card table-card">
+    <div class="table-header">
+      <h3 data-i18n="driver_availability">Driver Availability</h3>
+      <span data-i18n="driver_roster">Current driver roster</span>
+    </div>
+    <div class="table-responsive">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th data-i18n="th_driver">Driver</th>
+            <th data-i18n="th_phone">Phone</th>
+            <th data-i18n="th_availability">Availability</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for driver in drivers %}
+            <tr>
+              <td>{{ driver["name"] }}</td>
+              <td>{{ driver["phone"] }}</td>
+              <td>
+                <span class="status-badge i18n-status" data-status="{{ driver['availability'] }}">
+                  {{ driver["availability"] }}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+{% endblock %}

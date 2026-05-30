@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buyer Marketplace - AgriMove AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .post-offer-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            height: fit-content;
+        }
+
+        .post-offer-card h2 {
+            font-size: 1.5em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #2ecc71;
+            box-shadow: 0 0 10px rgba(46, 204, 113, 0.2);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(46, 204, 113, 0.3);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .offers-section h2 {
+            font-size: 1.5em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            padding: 10px 15px;
+            border: 2px solid #ecf0f1;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            border-color: #2ecc71;
+            color: #2ecc71;
+            background: #f0fdf4;
+        }
+
+        .offers-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .offer-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            border-left: 5px solid #2ecc71;
+            transition: all 0.3s;
+        }
+
+        .offer-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .offer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: start;
+            margin-bottom: 15px;
+        }
+
+        .offer-crop {
+            font-size: 1.3em;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .offer-status {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .offer-details {
+            margin-bottom: 15px;
+        }
+
+        .detail-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 0.95em;
+        }
+
+        .detail-item:last-child {
+            border-bottom: none;
+        }
+
+        .detail-label {
+            color: #7f8c8d;
+            font-weight: 500;
+        }
+
+        .detail-value {
+            color: #2c3e50;
+            font-weight: 600;
+        }
+
+        .price-highlight {
+            color: #e74c3c;
+            font-size: 1.1em;
+        }
+
+        .buyer-info {
+            background: #f8f9fa;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.95em;
+        }
+
+        .buyer-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .buyer-location {
+            color: #7f8c8d;
+            margin-bottom: 5px;
+        }
+
+        .verified-badge {
+            display: inline-block;
+            background: #d4edda;
+            color: #155724;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+            font-size: 0.95em;
+        }
+
+        .btn-accept {
+            background: #2ecc71;
+            color: white;
+        }
+
+        .btn-accept:hover {
+            background: #27ae60;
+            transform: translateY(-2px);
+        }
+
+        .btn-details {
+            background: #3498db;
+            color: white;
+        }
+
+        .btn-details:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+
+        .trusted-buyers {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .trusted-buyers h2 {
+            font-size: 1.5em;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .buyer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+
+        .buyer-item:hover {
+            border-color: #2ecc71;
+            background: #f0fdf4;
+        }
+
+        .buyer-item-info {
+            flex: 1;
+        }
+
+        .buyer-item-name {
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        .buyer-item-rating {
+            color: #f39c12;
+            font-size: 0.9em;
+        }
+
+        .notification {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success {
+            background: #d4edda;
+            color: #155724;
+            border-left: 4px solid #28a745;
+        }
+
+        .notification.error {
+            background: #f8d7da;
+            color: #721c24;
+            border-left: 4px solid #f5c6cb;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 1.5em;
+            font-weight: 600;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            cursor: pointer;
+            color: #7f8c8d;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .offers-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .modal-content {
+                width: 95%;
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateY(-20px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #2ecc71;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🛒 Buyer Marketplace</h1>
+            <p>Connect directly with farmers • Fair prices • Transparent trading</p>
+        </div>
+
+        <!-- Notification Area -->
+        <div id="notificationArea"></div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Post Offer Form -->
+            <div class="post-offer-card">
+                <h2>📝 Post Crop Demand</h2>
+                
+                <form id="offerForm">
+                    <div class="form-group">
+                        <label for="buyerName">Your Name *</label>
+                        <input type="text" id="buyerName" name="buyer_name" required placeholder="Enter your full name">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="phone">Phone Number *</label>
+                        <input type="tel" id="phone" name="phone" required placeholder="Enter your phone number">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="cropName">Crop Needed *</label>
+                        <input type="text" id="cropName" name="crop_name" required placeholder="e.g., Maize, Tomatoes, Beans">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="quantity">Quantity (units) *</label>
+                        <input type="number" id="quantity" name="quantity" required min="1" step="0.1" placeholder="e.g., 100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="offeredPrice">Offered Price Per Unit *</label>
+                        <input type="number" id="offeredPrice" name="offered_price" required min="0" step="0.01" placeholder="e.g., 95000">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="location">Pickup Location *</label>
+                        <input type="text" id="location" name="location" required placeholder="e.g., Dar es Salaam">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Description (optional)</label>
+                        <textarea id="description" name="description" placeholder="Add any special requirements or details..."></textarea>
+                    </div>
+
+                    <button type="submit" class="submit-btn">📤 Post Demand</button>
+                </form>
+            </div>
+
+            <!-- Active Offers -->
+            <div>
+                <h2>🌾 Active Crop Demands</h2>
+                
+                <div class="filters">
+                    <button class="filter-btn active" data-filter="all">All Crops</button>
+                    <button class="filter-btn" data-filter="maize">Maize</button>
+                    <button class="filter-btn" data-filter="tomatoes">Tomatoes</button>
+                    <button class="filter-btn" data-filter="beans">Beans</button>
+                    <button class="filter-btn" data-filter="rice">Rice</button>
+                    <button class="filter-btn" data-filter="potatoes">Potatoes</button>
+                </div>
+
+                <div class="offers-grid" id="offersGrid">
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <p>Loading crop demands...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Trusted Buyers Section -->
+        <div class="trusted-buyers">
+            <h2>✅ Verified Buyers</h2>
+            <div id="trustedBuyersContainer">
+                <p style="text-align: center; color: #7f8c8d;">Loading verified buyers...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Offer Details Modal -->
+    <div class="modal" id="offerModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span>Crop Demand Details</span>
+                <button class="close-btn" onclick="closeModal()">&times;</button>
+            </div>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <script>
+        const offersGrid = document.getElementById('offersGrid');
+        const offerForm = document.getElementById('offerForm');
+        const notificationArea = document.getElementById('notificationArea');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+        let currentFilter = 'all';
+        let allOffers = [];
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOffers();
+            loadTrustedBuyers();
+            setupEventListeners();
+        });
+
+        function setupEventListeners() {
+            offerForm.addEventListener('submit', handleFormSubmit);
+            
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    filterBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    currentFilter = this.dataset.filter;
+                    displayOffers();
+                });
+            });
+        }
+
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(offerForm);
+            const data = Object.fromEntries(formData);
+
+            const submitBtn = offerForm.querySelector('.submit-btn');
+            submitBtn.innerHTML = '<span class="loading"></span> Posting...';
+            submitBtn.disabled = true;
+
+            fetch('/api/buyer-offer/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('✅ Demand posted successfully! ' + data.message, 'success');
+                    offerForm.reset();
+                    loadOffers();
+                } else {
+                    showNotification('❌ Error: ' + data.error, 'error');
+                }
+            })
+            .catch(err => {
+                showNotification('❌ Error posting demand', 'error');
+            })
+            .finally(() => {
+                submitBtn.innerHTML = '📤 Post Demand';
+                submitBtn.disabled = false;
+            });
+        }
+
+        function loadOffers() {
+            fetch('/api/buyer-offers')
+                .then(r => r.json())
+                .then(data => {
+                    allOffers = data;
+                    displayOffers();
+                })
+                .catch(err => console.error('Error loading offers:', err));
+        }
+
+        function displayOffers() {
+            const filtered = currentFilter === 'all' 
+                ? allOffers 
+                : allOffers.filter(o => o.crop_name.toLowerCase() === currentFilter);
+
+            if (filtered.length === 0) {
+                offersGrid.innerHTML = `
+                    <div class="empty-state" style="grid-column: 1/-1;">
+                        <div class="empty-state-icon">📭</div>
+                        <p>No ${currentFilter === 'all' ? 'offers' : currentFilter + ' offers'} yet</p>
+                    </div>
+                `;
+                return;
+            }
+
+            offersGrid.innerHTML = filtered.map(offer => `
+                <div class="offer-card">
+                    <div class="offer-header">
+                        <div class="offer-crop">🌾 ${offer.crop_name}</div>
+                        <div class="offer-status">${offer.status}</div>
+                    </div>
+
+                    <div class="buyer-info">
+                        <div class="buyer-name">👤 ${offer.buyer_name}</div>
+                        <div class="buyer-location">📍 ${offer.location}</div>
+                        ${offer.verification_status === 'Verified' ? '<div class="verified-badge">✅ Verified Buyer</div>' : ''}
+                    </div>
+
+                    <div class="offer-details">
+                        <div class="detail-item">
+                            <span class="detail-label">Quantity Needed</span>
+                            <span class="detail-value">${offer.quantity} units</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Price Per Unit</span>
+                            <span class="detail-value price-highlight">${offer.offered_price.toLocaleString()}</span>
+                        </div>
+                        <div class="detail-item">
+                            <span class="detail-label">Total Value</span>
+                            <span class="detail-value">${(offer.quantity * offer.offered_price).toLocaleString()}</span>
+                        </div>
+                    </div>
+
+                    <div class="action-buttons">
+                        <button class="btn btn-details" onclick="showOfferDetails(${offer.id})">View Details</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadTrustedBuyers() {
+            fetch('/api/trusted-buyers')
+                .then(r => r.json())
+                .then(data => {
+                    const container = document.getElementById('trustedBuyersContainer');
+                    if (data.length === 0) {
+                        container.innerHTML = '<p style="text-align: center; color: #7f8c8d;">No verified buyers yet</p>';
+                        return;
+                    }
+
+                    container.innerHTML = data.map(buyer => `
+                        <div class="buyer-item">
+                            <div class="buyer-item-info">
+                                <div class="buyer-item-name">👤 ${buyer.buyer_name}</div>
+                                <div class="buyer-item-rating">⭐ ${buyer.rating} • ${buyer.total_purchases} purchases</div>
+                            </div>
+                        </div>
+                    `).join('');
+                })
+                .catch(err => console.error('Error loading trusted buyers:', err));
+        }
+
+        function showOfferDetails(offerId) {
+            const offer = allOffers.find(o => o.id === offerId);
+            if (!offer) return;
+
+            const modalBody = document.getElementById('modalBody');
+            modalBody.innerHTML = `
+                <div class="offer-details">
+                    <div class="detail-item">
+                        <span class="detail-label">Crop</span>
+                        <span class="detail-value">${offer.crop_name}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Buyer</span>
+                        <span class="detail-value">${offer.buyer_name}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Quantity</span>
+                        <span class="detail-value">${offer.quantity} units</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Offered Price</span>
+                        <span class="detail-value price-highlight">${offer.offered_price.toLocaleString()}/unit</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Total Value</span>
+                        <span class="detail-value">${(offer.quantity * offer.offered_price).toLocaleString()}</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Location</span>
+                        <span class="detail-value">${offer.location}</span>
+                    </div>
+                    ${offer.description ? `
+                    <div class="detail-item">
+                        <span class="detail-label">Details</span>
+                        <span class="detail-value">${offer.description}</span>
+                    </div>
+                    ` : ''}
+                </div>
+            `;
+
+            document.getElementById('offerModal').classList.add('active');
+        }
+
+        function closeModal() {
+            document.getElementById('offerModal').classList.remove('active');
+        }
+
+        function showNotification(message, type) {
+            const div = document.createElement('div');
+            div.className = `notification ${type}`;
+            div.textContent = message;
+            notificationArea.appendChild(div);
+            
+            setTimeout(() => div.remove(), 5000);
+        }
+    </script>
+</body>
+</html>

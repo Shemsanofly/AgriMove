@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="{{ lang }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ heading }} | AgriMove </title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  </head>
+  <body class="dashboard-body">
+    <script>
+      if (localStorage.getItem("darkMode") === "true") {
+        document.body.classList.add("dark-mode");
+      }
+    </script>
+    {% set heading_key = {
+      'farmer': 'heading_farmer', 'driver': 'heading_driver', 'admin': 'heading_admin',
+      'analytics': 'heading_analytics', 'insights': 'heading_insights',
+      'market_prices': 'heading_market_prices', 'transport': 'heading_shamba',
+      'payments': 'heading_payments', 'storage': 'heading_storage'
+    }.get(active, 'heading_admin') %}
+    {% set sub_key = {
+      'farmer': 'sub_farmer', 'driver': 'sub_driver', 'admin': 'sub_admin',
+      'analytics': 'sub_analytics', 'insights': 'sub_insights',
+      'market_prices': 'sub_market_prices', 'transport': 'sub_shamba',
+      'payments': 'sub_payments', 'storage': 'sub_storage'
+    }.get(active, 'sub_admin') %}
+    <div class="dashboard-layout">
+      <aside class="sidebar">
+        <a class="logo" href="/">AgriMove </a>
+        <p class="sidebar-tag" data-i18n="sidebar_tag">Smart rural logistics suite</p>
+        <nav class="sidebar-nav">
+          <a href="{{ url_for('farmer_dashboard') }}" class="{% if active == 'farmer' %}active{% endif %}" data-i18n="nav_farmer">
+            Farmer Dashboard
+          </a>
+          <a href="/market-prices" class="{% if active == 'market_prices' %}active{% endif %}" data-i18n="nav_market_prices">
+            📈 Market Prices
+          </a>
+          <a href="/transport" class="{% if active == 'transport' %}active{% endif %}" data-i18n="nav_shamba_connect">
+            🌾 Shamba Connect
+          </a>
+          <a href="/payments" class="{% if active == 'payments' %}active{% endif %}" data-i18n="nav_payments">
+            🔒 Secure Payments
+          </a>
+          <a href="/storage" class="{% if active == 'storage' %}active{% endif %}" data-i18n="nav_storage">
+            📦 My Storage
+          </a>
+          <a href="{{ url_for('market_insights') }}" class="{% if active == 'insights' %}active{% endif %}" data-i18n="nav_insights">
+            💡 AI Market Insights
+          </a>
+          <a href="{{ url_for('driver_dashboard') }}" class="{% if active == 'driver' %}active{% endif %}" data-i18n="nav_driver">
+            Driver Dashboard
+          </a>
+          <a href="{{ url_for('admin_dashboard') }}" class="{% if active == 'admin' %}active{% endif %}" data-i18n="nav_admin">
+            Admin Dashboard
+          </a>
+          <a href="{{ url_for('admin_analytics') }}" class="{% if active == 'analytics' %}active{% endif %}" data-i18n="nav_analytics">
+            Analytics
+          </a>
+          <a href="{{ url_for('home') }}" data-i18n="nav_home">Back to Home</a>
+        </nav>
+        <div class="sidebar-footer">
+          <span data-i18n="sidebar_footer">AI Route Optimization Active</span>
+          <small data-i18n="sidebar_footer_sub">Adaptive planning for rural routes</small>
+        </div>
+      </aside>
+
+      <div class="dashboard-content">
+        <header class="dashboard-header">
+          <div>
+            <h1>{{ heading }}</h1>
+            <p>{{ subheading }}</p>
+          </div>
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <button id="langToggleBtn" class="btn btn-ghost" style="padding: 8px 16px; border-radius: 8px; font-size: 0.9rem; cursor: pointer;">🇹🇿 SW</button>
+            <button id="themeToggleBtn" class="btn btn-ghost" style="padding: 8px 16px; border-radius: 8px; font-size: 0.9rem; cursor: pointer;" data-i18n="btn_mode">Mode</button>
+            <button class="sidebar-toggle" type="button" data-i18n="btn_menu">Menu</button>
+          </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            <div class="flash-area">
+              {% for category, message in messages %}
+                <div class="flash-card {{ category }}">{{ message }}</div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        {% endwith %}
+
+        <main class="dashboard-main">
+          {% block content %}{% endblock %}
+        </main>
+      </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+      const themeBtn = document.getElementById("themeToggleBtn");
+      if (themeBtn) {
+        themeBtn.addEventListener("click", () => {
+          document.body.classList.toggle("dark-mode");
+          const isDark = document.body.classList.contains("dark-mode");
+          localStorage.setItem("darkMode", isDark);
+          const adminModeToggle = document.getElementById("darkModeToggle");
+          if (adminModeToggle) {
+            adminModeToggle.textContent = isDark ? "☀" : "◐";
+          }
+          if (window.applyAgriMoveLanguage) {
+            window.applyAgriMoveLanguage(localStorage.getItem("agrimove_lang") || "en");
+          }
+        });
+      }
+    </script>
+</body>
+</html>

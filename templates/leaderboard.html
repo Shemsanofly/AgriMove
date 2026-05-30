@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Driver Leaderboard | AgriMove AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+</head>
+<body>
+    <div class="leaderboard-container">
+        <header class="leaderboard-header">
+            <div class="container">
+                <a href="/" class="back-link">← Home</a>
+                <h1>🏆 Driver Leaderboard</h1>
+                <p>Top performers on AgriMove AI</p>
+            </div>
+        </header>
+
+        <main class="container leaderboard-main">
+            <div class="leaderboard-filters">
+                <button class="filter-btn active" onclick="filterBy('rating')">⭐ Top Rated</button>
+                <button class="filter-btn" onclick="filterBy('deliveries')">📦 Most Deliveries</button>
+                <button class="filter-btn" onclick="filterBy('earnings')">💰 Top Earners</button>
+            </div>
+
+            <div class="leaderboard-grid">
+                <div class="card top-three">
+                    <h3>🥇 Top 3 Performers</h3>
+                    <div class="podium">
+                        {% set sorted_by_rating = drivers|sort(attribute='rating', reverse=True)|list %}
+                        
+                        {% if sorted_by_rating|length >= 2 %}
+                        <div class="podium-spot second">
+                            <div class="medal">🥈</div>
+                            <div class="driver-card-small">
+                                <p class="rank">2nd Place</p>
+                                <h4>{{ sorted_by_rating[1]['name'] }}</h4>
+                                <p class="stat">{{ sorted_by_rating[1]['rating'] }}⭐</p>
+                                <p class="stat-label">{{ sorted_by_rating[1]['total_deliveries'] }} deliveries</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if sorted_by_rating %}
+                        <div class="podium-spot first">
+                            <div class="medal">🥇</div>
+                            <div class="driver-card-small">
+                                <p class="rank">1st Place</p>
+                                <h4>{{ sorted_by_rating[0]['name'] }}</h4>
+                                <p class="stat">{{ sorted_by_rating[0]['rating'] }}⭐</p>
+                                <p class="stat-label">{{ sorted_by_rating[0]['total_deliveries'] }} deliveries</p>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if sorted_by_rating|length >= 3 %}
+                        <div class="podium-spot third">
+                            <div class="medal">🥉</div>
+                            <div class="driver-card-small">
+                                <p class="rank">3rd Place</p>
+                                <h4>{{ sorted_by_rating[2]['name'] }}</h4>
+                                <p class="stat">{{ sorted_by_rating[2]['rating'] }}⭐</p>
+                                <p class="stat-label">{{ sorted_by_rating[2]['total_deliveries'] }} deliveries</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card leaderboard-table">
+                <h3>Full Rankings</h3>
+                <div class="table-responsive">
+                    <table class="leaderboard-data">
+                        <thead>
+                            <tr>
+                                <th class="rank-col">Rank</th>
+                                <th>Driver Name</th>
+                                <th class="center">Rating</th>
+                                <th class="center">Deliveries</th>
+                                <th class="center">Earnings (GHS)</th>
+                                <th class="center">Vehicle</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for driver in sorted_by_rating %}
+                            <tr class="leaderboard-row">
+                                <td class="rank-col">
+                                    {% if loop.index == 1 %}
+                                        <span class="rank-badge first">🥇</span>
+                                    {% elif loop.index == 2 %}
+                                        <span class="rank-badge second">🥈</span>
+                                    {% elif loop.index == 3 %}
+                                        <span class="rank-badge third">🥉</span>
+                                    {% else %}
+                                        <span class="rank-number">#{{ loop.index }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('driver_profile', driver_id=driver['id']) }}" class="driver-name">
+                                        {{ driver['name'] }}
+                                    </a>
+                                </td>
+                                <td class="center">
+                                    <div class="rating-display">
+                                        {% for i in range(5) %}
+                                            <span class="star {% if i < driver['rating']|int %}filled{% endif %}">★</span>
+                                        {% endfor %}
+                                        <span class="rating-value">{{ driver['rating'] }}</span>
+                                    </div>
+                                </td>
+                                <td class="center">
+                                    <strong>{{ driver['total_deliveries'] }}</strong>
+                                </td>
+                                <td class="center">
+                                    <span class="earnings-badge">₵{{ "%.2f"|format(driver['earnings']) }}</span>
+                                </td>
+                                <td class="center">
+                                    <span class="vehicle-badge">{{ driver['vehicle_type']|upper }}</span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <section class="card" style="margin-top: 24px;">
+                <h3>📊 Leaderboard Stats</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <h4>Total Drivers</h4>
+                        <p class="stat-value">{{ drivers|length }}</p>
+                    </div>
+                    <div class="stat-item">
+                        <h4>Average Rating</h4>
+                        <p class="stat-value">{{ (drivers|map(attribute='rating')|sum / drivers|length)|round(1) }}⭐</p>
+                    </div>
+                    <div class="stat-item">
+                        <h4>Total Deliveries</h4>
+                        <p class="stat-value">{{ drivers|map(attribute='total_deliveries')|sum }}</p>
+                    </div>
+                    <div class="stat-item">
+                        <h4>Total Earnings</h4>
+                        <p class="stat-value">₵{{ "%.0f"|format(drivers|map(attribute='earnings')|sum) }}</p>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <style>
+        .leaderboard-container {
+            background: var(--bg-light);
+            min-height: 100vh;
+        }
+
+        .leaderboard-header {
+            background: linear-gradient(135deg, var(--green), var(--gold));
+            color: var(--white);
+            padding: 40px 0;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .leaderboard-header h1 {
+            font-size: 2.4rem;
+            margin: 12px 0;
+        }
+
+        .back-link {
+            color: var(--white);
+            font-weight: 600;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .leaderboard-main {
+            display: grid;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .leaderboard-filters {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-btn {
+            background: var(--white);
+            border: 2px solid rgba(47, 125, 50, 0.2);
+            padding: 10px 20px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            color: var(--dark);
+        }
+
+        .filter-btn:hover,
+        .filter-btn.active {
+            background: var(--green);
+            color: var(--white);
+            border-color: var(--green);
+        }
+
+        .leaderboard-grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .top-three {
+            padding: 32px;
+        }
+
+        .podium {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 24px;
+            align-items: flex-end;
+        }
+
+        .podium-spot {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .podium-spot.first {
+            grid-row: 1 / -1;
+        }
+
+        .podium-spot.second {
+            grid-row: 2 / -1;
+        }
+
+        .podium-spot.third {
+            grid-row: 3 / -1;
+        }
+
+        .medal {
+            font-size: 2.4rem;
+        }
+
+        .driver-card-small {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.1), rgba(242, 193, 78, 0.05));
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            width: 100%;
+        }
+
+        .driver-card-small .rank {
+            font-size: 0.8rem;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .driver-card-small h4 {
+            color: var(--dark);
+            margin-bottom: 8px;
+        }
+
+        .driver-card-small .stat {
+            font-weight: 700;
+            color: var(--green);
+            font-size: 1.2rem;
+        }
+
+        .driver-card-small .stat-label {
+            color: var(--muted);
+            font-size: 0.85rem;
+        }
+
+        .leaderboard-table {
+            padding: 24px;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .leaderboard-data {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .leaderboard-data thead {
+            background: rgba(47, 125, 50, 0.08);
+        }
+
+        .leaderboard-data th {
+            padding: 14px;
+            text-align: left;
+            color: var(--dark);
+            font-weight: 700;
+            border-bottom: 2px solid rgba(47, 125, 50, 0.2);
+        }
+
+        .leaderboard-data th.center {
+            text-align: center;
+        }
+
+        .leaderboard-data td {
+            padding: 14px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+            color: var(--dark);
+        }
+
+        .leaderboard-data td.center {
+            text-align: center;
+        }
+
+        .rank-col {
+            width: 60px;
+        }
+
+        .rank-badge {
+            font-size: 1.6rem;
+        }
+
+        .rank-number {
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .driver-name {
+            color: var(--green);
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .driver-name:hover {
+            text-decoration: underline;
+        }
+
+        .rating-display {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+        }
+
+        .rating-display .star {
+            font-size: 0.9rem;
+            color: rgba(47, 125, 50, 0.3);
+        }
+
+        .rating-display .star.filled {
+            color: var(--gold);
+        }
+
+        .rating-value {
+            font-weight: 600;
+            color: var(--dark);
+            margin-left: 6px;
+        }
+
+        .earnings-badge {
+            background: rgba(47, 125, 50, 0.1);
+            color: var(--green);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.9rem;
+        }
+
+        .vehicle-badge {
+            background: rgba(242, 193, 78, 0.2);
+            color: var(--dark);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+
+        .stat-item {
+            background: linear-gradient(135deg, rgba(47, 125, 50, 0.08), rgba(242, 193, 78, 0.05));
+            border-radius: 10px;
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-item h4 {
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .stat-value {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--green);
+        }
+
+        @media (max-width: 768px) {
+            .podium {
+                grid-template-columns: 1fr;
+                align-items: stretch;
+            }
+
+            .podium-spot {
+                grid-row: auto !important;
+            }
+
+            .leaderboard-data th,
+            .leaderboard-data td {
+                padding: 8px;
+                font-size: 0.9rem;
+            }
+
+            .leaderboard-header h1 {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</body>
+</html>

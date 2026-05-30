@@ -1,0 +1,338 @@
+{% extends "dashboard_base.html" %}
+
+{% block content %}
+<!-- AI Alerts Marquee Feed -->
+{% if alerts %}
+<div class="ai-ticker-container">
+  <div class="ticker-label">💡 AI Insights Live</div>
+  <div class="ticker-wrap">
+    <div class="ticker-content">
+      {% for alert in alerts %}
+      <span class="ticker-item">{{ alert }}</span>
+      {% endfor %}
+      <!-- Repeat to ensure smooth scrolling loop -->
+      {% for alert in alerts %}
+      <span class="ticker-item">{{ alert }}</span>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Grid 1: Best Markets and Projections -->
+<div class="dashboard-grid">
+  <!-- Best Markets Card -->
+  <div class="card best-markets-card">
+    <div class="card-header-ai">
+      <h3>📈 Premium Market Recommendations</h3>
+      <span class="badge-ai">AI Optimal</span>
+    </div>
+    <p class="section-sub">These regions offer the highest payout rates for your harvest today.</p>
+    
+    <div class="markets-list">
+      {% for item in best_markets %}
+      <div class="market-row-item">
+        <div class="crop-info">
+          <span class="crop-icon">🌾</span>
+          <div>
+            <strong>{{ item.crop }}</strong>
+            <small>Best: {{ item.region }}</small>
+          </div>
+        </div>
+        <div class="market-values">
+          <span class="price-val">{{ item.price|int }} TZS</span>
+          <span class="trend-badge trend-{{ item.trend|lower }}">
+            {{ '▲' if item.trend == 'Rising' else '▼' if item.trend == 'Falling' else '●' }} {{ item.trend }}
+          </span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- AI Price Predictions Chart -->
+  <div class="card projections-card">
+    <div class="card-header-ai">
+      <h3>🔮 7-Day AI Price Projections</h3>
+      <span class="badge-ai-model">LSTM Model v2.4</span>
+    </div>
+    <p class="section-sub">Projected commodity price movements based on seasonal supply cycles.</p>
+    
+    <div class="projections-list">
+      {% for item in projections %}
+      <div class="projection-item">
+        <div class="proj-meta">
+          <strong>{{ item.crop }}</strong>
+          <span>Target: {{ item.region }}</span>
+        </div>
+        <div class="proj-flow">
+          <div class="proj-flow-val">
+            <span class="old-price">{{ item.current_price|int }} TZS</span>
+            <span class="arrow-connector">→</span>
+            <span class="new-price">{{ item.projected_price|int }} TZS</span>
+          </div>
+          {% if item.proj_percent > 0 %}
+          <span class="pct-badge positive">+{{ item.proj_percent }}% AI Forecast</span>
+          {% elif item.proj_percent < 0 %}
+          <span class="pct-badge negative">{{ item.proj_percent }}% AI Forecast</span>
+          {% else %}
+          <span class="pct-badge stable">Stable Price</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Grid 2: Demand Hotspots and Transport Consolidation -->
+<div class="dashboard-two" style="margin-top: 30px;">
+  <!-- High-Demand Hotspots -->
+  <div class="card hotspots-card">
+    <h3>🔥 High-Demand Hotspots</h3>
+    <p class="section-sub font-sm">Regions with critical food reserves deficit and rapid buyer acquisition activity.</p>
+    
+    <div class="hotspots-grid">
+      {% for spot in hotspots %}
+      <div class="hotspot-tile">
+        <div class="hotspot-header">
+          <strong>{{ spot.region }}</strong>
+          <span class="glow-dot"></span>
+        </div>
+        <div class="hotspot-body">
+          <p>Product: <strong>{{ spot.crop_name }}</strong></p>
+          <p>Avg. Price: <span>{{ spot.price|int }} TZS</span></p>
+        </div>
+        <div class="hotspot-action">
+          <a href="{{ url_for('farmer_dashboard') }}" class="btn-micro">Book Transport →</a>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Smart Transport Optimizer -->
+  <div class="card logistics-card">
+    <div class="card-header-ai">
+      <h3>🚀 Smart Logistics Advisor</h3>
+      <span class="badge-savings">Save Transport Costs</span>
+    </div>
+    <p class="section-sub">Consolidation recommendations matching local crop storage levels with driver routes.</p>
+    
+    <div class="recs-list">
+      {% if transport_recs %}
+        {% for rec in transport_recs %}
+        <div class="rec-card-item">
+          <div class="rec-title">
+            <span class="truck-icon">🚚</span>
+            <div>
+              <strong>{{ rec.crop }} to {{ rec.region }}</strong>
+              <small>Matched Driver: {{ rec.driver_name }} ({{ rec.vehicle }})</small>
+            </div>
+          </div>
+          <p class="rec-benefit">{{ rec.benefit }}</p>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="rec-empty-state">
+          <p>No active driver routes available for matching today.</p>
+          <small>Check back when fleet availability updates.</small>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Local styling elements for AI Market Intelligence dashboard.
+     Will merge full rules into styles.css. */
+  .ai-ticker-container {
+    background: #0f1f16;
+    color: #e6f4ea;
+    border-radius: 12px;
+    padding: 12px 18px;
+    margin-bottom: 30px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    overflow: hidden;
+    border: 1px solid rgba(47, 125, 50, 0.3);
+  }
+  .ticker-label {
+    background: var(--green);
+    color: var(--white);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 6px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-shadow: 0 4px 10px rgba(47, 125, 50, 0.35);
+  }
+  .ticker-wrap {
+    overflow: hidden;
+    width: 100%;
+  }
+  .ticker-content {
+    display: inline-block;
+    white-space: nowrap;
+    padding-left: 100%;
+    animation: ticker-slide 28s linear infinite;
+  }
+  .ticker-item {
+    display: inline-block;
+    margin-right: 40px;
+    font-weight: 500;
+    font-size: 0.95rem;
+  }
+  @keyframes ticker-slide {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-100%, 0, 0); }
+  }
+
+  .card-header-ai {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .badge-ai, .badge-ai-model, .badge-savings {
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 99px;
+  }
+  .badge-ai { background: rgba(47, 125, 50, 0.15); color: var(--green); }
+  .badge-ai-model { background: rgba(15, 31, 22, 0.08); color: var(--text); }
+  .badge-savings { background: rgba(242, 193, 78, 0.2); color: #8a6d3b; }
+
+  .section-sub {
+    color: var(--muted);
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+  }
+  .markets-list, .projections-list, .recs-list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .market-row-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px;
+    background: var(--bg-light);
+    border-radius: 10px;
+    border: 1px solid rgba(15, 31, 22, 0.05);
+    transition: transform 0.2s ease;
+  }
+  .market-row-item:hover {
+    transform: translateX(4px);
+    border-color: rgba(47, 125, 50, 0.2);
+  }
+  .crop-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .crop-icon { font-size: 1.5rem; }
+  .crop-info div { display: flex; flex-direction: column; }
+  .crop-info small { color: var(--muted); font-size: 0.8rem; }
+  .market-values { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+  .price-val { font-weight: 700; color: var(--green); }
+  .trend-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+  .trend-rising { background: #e6f4ea; color: #1f5c24; }
+  .trend-falling { background: #fce8e6; color: #a51d24; }
+  .trend-stable { background: #e8f0fe; color: #1c3d5a; }
+
+  .projection-item {
+    padding: 14px;
+    background: var(--bg-light);
+    border-radius: 10px;
+    border: 1px solid rgba(15, 31, 22, 0.05);
+  }
+  .proj-meta { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.85rem; color: var(--muted); }
+  .proj-meta strong { color: var(--text); font-size: 0.95rem; }
+  .proj-flow { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .proj-flow-val { display: flex; align-items: center; gap: 8px; font-weight: 600; }
+  .old-price { color: var(--muted); text-decoration: line-through; font-size: 0.9rem; }
+  .arrow-connector { color: var(--green); }
+  .new-price { color: var(--green); font-size: 1.05rem; font-weight: 700; }
+  .pct-badge {
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+  .pct-badge.positive { background: #e6f4ea; color: #2f7d32; border: 1px solid rgba(47, 125, 50, 0.2); }
+  .pct-badge.negative { background: #fce8e6; color: #c5221f; border: 1px solid rgba(197, 34, 31, 0.2); }
+  .pct-badge.stable { background: #f1f3f4; color: #5f6368; }
+
+  .hotspots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+    margin-top: 10px;
+  }
+  .hotspot-tile {
+    background: var(--bg-light);
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid rgba(15, 31, 22, 0.05);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .hotspot-tile::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 4px;
+    background: var(--gold);
+  }
+  .hotspot-header { display: flex; justify-content: space-between; align-items: center; }
+  .glow-dot {
+    width: 8px; height: 8px;
+    background: var(--gold);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--gold);
+    animation: glow-pulse 1.8s infinite;
+  }
+  @keyframes glow-pulse {
+    0% { opacity: 0.3; }
+    50% { opacity: 1; }
+    100% { opacity: 0.3; }
+  }
+  .hotspot-body p { font-size: 0.85rem; color: var(--muted); }
+  .hotspot-body span { color: var(--green); font-weight: 700; }
+  .hotspot-action { margin-top: 4px; }
+  .btn-micro {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--green);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .btn-micro:hover { color: var(--gold); }
+
+  .rec-card-item {
+    background: rgba(242, 193, 78, 0.08);
+    border-left: 4px solid var(--gold);
+    padding: 14px;
+    border-radius: 0 10px 10px 0;
+  }
+  .rec-title { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
+  .truck-icon { font-size: 1.3rem; }
+  .rec-title div { display: flex; flex-direction: column; }
+  .rec-title small { color: var(--muted); font-size: 0.75rem; }
+  .rec-benefit { font-size: 0.85rem; color: var(--text); }
+</style>
+{% endblock %}

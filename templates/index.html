@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="{{ lang }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AgriMove AI | Smart Rural Logistics</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}" />
+  </head>
+  <body>
+    <header class="header" id="home">
+      <nav class="navbar">
+        <div class="container nav-content">
+          <a class="logo" href="/">AgriMove <span>AI</span></a>
+          <button class="nav-toggle" aria-label="Toggle navigation" aria-expanded="false">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+          <div class="nav-links">
+            <a href="/market-prices" data-i18n="nav_market_prices">Market Prices</a>
+            <a href="/transport" data-i18n="nav_shamba_connect">Shamba Connect</a>
+            <a href="/payments" data-i18n="nav_payments">Secure Payments</a>
+            <a href="/storage" data-i18n="nav_storage">My Storage</a>
+            <a href="{{ url_for('farmer_dashboard') }}" data-i18n="nav_dashboard">Dashboard</a>
+            <button id="langToggleBtn" class="btn btn-ghost" style="padding: 6px 14px; border-radius: 20px; font-size: 0.85rem; font-weight: 700; cursor: pointer; border: 1.5px solid var(--green); margin-left: 8px;">🇹🇿 SW</button>
+          </div>
+        </div>
+      </nav>
+
+      <div class="hero">
+        <div class="container hero-grid">
+          <div class="hero-text reveal">
+            <p class="eyebrow" data-i18n="hero_eyebrow">Smart Rural Logistics</p>
+            <h1 data-i18n="hero_title">Move harvests faster with AI-powered transport coordination</h1>
+            <p data-i18n="hero_desc">
+              AgriMove AI connects farmers with trusted drivers, optimizes village routes, and
+              delivers real-time visibility from pickup to market.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn-primary" href="/farmer" data-i18n="hero_cta_transport">Request Transport</a>
+              <a class="btn btn-ghost" href="#features" data-i18n="hero_cta_features">Explore Features</a>
+            </div>
+            <div class="hero-stats">
+              <div class="stat">
+                <h3>45%</h3>
+                <p data-i18n="stat_faster">faster delivery cycles</p>
+              </div>
+              <div class="stat">
+                <h3>1,200+</h3>
+                <p data-i18n="stat_drivers">rural drivers onboarded</p>
+              </div>
+              <div class="stat">
+                <h3>98%</h3>
+                <p data-i18n="stat_success">market arrival success</p>
+              </div>
+            </div>
+          </div>
+          <div class="hero-visual reveal">
+            <div class="map-card">
+              <div class="map-header">
+                <span data-i18n="map_live">Live Route</span>
+                <strong>Nkasi to Kumasi Market</strong>
+              </div>
+              <div class="map-body">
+                <div class="route-line"></div>
+                <div class="map-points">
+                  <span class="point start"></span>
+                  <span class="point mid"></span>
+                  <span class="point end"></span>
+                </div>
+                <div class="map-legend">
+                  <div><span class="dot green"></span> <span data-i18n="map_farm">Farm pickup</span></div>
+                  <div><span class="dot gold"></span> <span data-i18n="map_hub">Collection hub</span></div>
+                  <div><span class="dot dark"></span> <span data-i18n="map_market">Market</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="metric-card">
+              <h4 data-i18n="fleet_avail">Fleet Availability</h4>
+              <p class="metric">86%</p>
+              <span class="metric-sub" data-i18n="fleet_ready">Drivers ready in 20 minutes</span>
+            </div>
+            <div class="metric-card">
+              <h4 data-i18n="freshness">Freshness Window</h4>
+              <p class="metric">6h 15m</p>
+              <span class="metric-sub" data-i18n="freshness_sub">Optimal arrival forecast</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section style="background: linear-gradient(135deg, var(--green-light), rgba(242, 193, 78, 0.1)); border-bottom: 2px solid rgba(47, 125, 50, 0.15); padding: 25px 0;">
+        <div class="container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; align-items: center; text-align: center;">
+          <div style="background: var(--card-bg); padding: 18px; border-radius: 14px; box-shadow: var(--shadow); border: 1.5px solid rgba(47, 125, 50, 0.2);">
+            <span style="font-size: 2.2rem;">👨‍🌾</span>
+            <h4 data-i18n="farmers_joined" style="margin: 8px 0 4px; color: var(--muted); font-size: 0.9rem; text-transform: uppercase; font-weight: 700;">Farmers Joined</h4>
+            <div style="font-size: 1.8rem; font-weight: 800; color: var(--green-dark);">{{ farmers_count }}</div>
+          </div>
+          <div style="background: var(--card-bg); padding: 18px; border-radius: 14px; box-shadow: var(--shadow); border: 1.5px solid rgba(47, 125, 50, 0.2);">
+            <span style="font-size: 2.2rem;">🌽</span>
+            <h4 data-i18n="maize_price" style="margin: 8px 0 4px; color: var(--muted); font-size: 0.9rem; text-transform: uppercase; font-weight: 700;">Today's Maize Price</h4>
+            <div style="font-size: 1.8rem; font-weight: 800; color: var(--green-dark);">{{ "{:,.0f}".format(maize_price) }} TSh/Kg</div>
+          </div>
+          <div style="background: var(--card-bg); padding: 18px; border-radius: 14px; box-shadow: var(--shadow); border: 1.5px solid rgba(47, 125, 50, 0.2);">
+            <span style="font-size: 2.2rem;">🚛</span>
+            <h4 data-i18n="loads_pooled" style="margin: 8px 0 4px; color: var(--muted); font-size: 0.9rem; text-transform: uppercase; font-weight: 700;">Loads Pooled</h4>
+            <div style="font-size: 1.8rem; font-weight: 800; color: var(--green-dark);">{{ loads_count }}</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="features" class="section features">
+        <div class="container">
+          <div class="section-header reveal">
+            <h2 data-i18n="features_title">Smart features built for rural movement</h2>
+            <p data-i18n="features_desc">
+              Every shipment is matched, tracked, and optimized with AI so farmers focus on
+              harvesting while drivers focus on safe delivery.
+            </p>
+          </div>
+          <div class="features-grid">
+            <article class="feature-card reveal">
+              <h3 data-i18n="feat_matching">Smart Transport Matching</h3>
+              <p data-i18n="feat_matching_desc">Instantly pair farms with nearby vetted drivers and the right vehicle size.</p>
+            </article>
+            <article class="feature-card reveal">
+              <h3 data-i18n="feat_sms">SMS Notifications</h3>
+              <p data-i18n="feat_sms_desc">Keep farmers informed even with low data connectivity using SMS updates.</p>
+            </article>
+            <article class="feature-card reveal">
+              <h3 data-i18n="feat_tracking">Real-Time Tracking</h3>
+              <p data-i18n="feat_tracking_desc">Track shipments from village pickup to market arrival in real time.</p>
+            </article>
+            <article class="feature-card reveal">
+              <h3 data-i18n="feat_route">AI Route Optimization</h3>
+              <p data-i18n="feat_route_desc">Reduce delays with AI-assisted route planning that adapts to road conditions.</p>
+            </article>
+            <article class="feature-card reveal">
+              <h3 data-i18n="feat_connectivity">Rural Connectivity</h3>
+              <p data-i18n="feat_connectivity_desc">Offline-first workflows designed for rural network coverage and power limits.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section id="about" class="section about">
+        <div class="container about-grid">
+          <div class="about-text reveal">
+            <p class="eyebrow" data-i18n="about_eyebrow">About AgriMove AI</p>
+            <h2 data-i18n="about_title">Empowering farmers with reliable, efficient logistics</h2>
+            <p data-i18n="about_desc">
+              AgriMove AI helps rural farmers move produce faster by connecting them to nearby
+              drivers, coordinating routes, and ensuring transparent communication.
+            </p>
+            <div class="about-tags">
+              <span data-i18n="tag_farmer">Farmer-first design</span>
+              <span data-i18n="tag_drivers">Trusted driver network</span>
+              <span data-i18n="tag_insights">Market-ready insights</span>
+            </div>
+          </div>
+          <div class="about-cards reveal">
+            <div class="about-card">
+              <h3 data-i18n="about_pickups">Efficient pickups</h3>
+              <p data-i18n="about_pickups_desc">Schedule transport in minutes, not hours, with automated matching.</p>
+            </div>
+            <div class="about-card">
+              <h3 data-i18n="about_pricing">Transparent pricing</h3>
+              <p data-i18n="about_pricing_desc">Clear rates and shared trip visibility help everyone plan better.</p>
+            </div>
+            <div class="about-card">
+              <h3 data-i18n="about_community">Community growth</h3>
+              <p data-i18n="about_community_desc">More deliveries mean stronger rural economies and better livelihoods.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="contact" class="section contact">
+        <div class="container contact-grid">
+          <div class="contact-info reveal">
+            <p class="eyebrow" data-i18n="contact_eyebrow">Request transport</p>
+            <h2 data-i18n="contact_title">Move your harvest with confidence</h2>
+            <p data-i18n="contact_desc">
+              Share pickup details and our dispatch team will connect you with a driver within minutes.
+            </p>
+            <div class="contact-cards">
+              <div>
+                <h4 data-i18n="contact_hotline">Dispatch hotline</h4>
+                <p>+255 555 018 920</p>
+              </div>
+              <div>
+                <h4 data-i18n="contact_email">Email</h4>
+                <p>dispatch@agrimove.ai</p>
+              </div>
+              <div>
+                <h4 data-i18n="contact_coverage">Coverage</h4>
+                <p>Ghana, Kenya, Nigeria, Tanzania</p>
+              </div>
+            </div>
+          </div>
+          <form class="contact-form reveal" id="transportForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="name" data-i18n="label_name">Full name</label>
+                <input id="name" name="name" type="text" data-i18n-placeholder="ph_name" placeholder="Ama Mensah" required />
+              </div>
+              <div class="form-group">
+                <label for="phone" data-i18n="label_phone">Phone number</label>
+                <input id="phone" name="phone" type="tel" data-i18n-placeholder="ph_phone" placeholder="+255..." required />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="location" data-i18n="label_pickup">Pickup location</label>
+                <input id="location" name="location" type="text" data-i18n-placeholder="ph_location" placeholder="Village or farm" required />
+              </div>
+              <div class="form-group">
+                <label for="produce" data-i18n="label_produce">Produce type</label>
+                <input id="produce" name="produce" type="text" data-i18n-placeholder="ph_produce" placeholder="Tomatoes, maize, cocoa" required />
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="details" data-i18n="label_notes">Delivery notes</label>
+              <textarea id="details" name="details" rows="4" data-i18n-placeholder="ph_notes" placeholder="Pickup date, quantity, market"></textarea>
+            </div>
+            <button class="btn btn-primary" type="submit" data-i18n="btn_send_request">Send request</button>
+            <p class="form-message" id="formMessage" role="status"></p>
+          </form>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-grid">
+        <div>
+          <a class="logo" href="#home">AgriMove <span>AI</span></a>
+          <p data-i18n="footer_desc">Smart rural logistics built for African agriculture.</p>
+          <div class="socials">
+            <a href="#" aria-label="LinkedIn">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 3a2 2 0 1 1 0 4a2 2 0 0 1 0-4zm1 6h-2v12h2zm4 0h-2v12h2v-6.5c0-1.8 2-2 2 0v6.5h2v-7.5c0-3.2-3.5-3.1-4-1.5z" />
+              </svg>
+            </a>
+            <a href="#" aria-label="X">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 4l7.2 7.7L4 20h3l5.5-6 5.7 6H20l-7.5-8.2L19.5 4h-3l-5 5.6L7 4z" />
+              </svg>
+            </a>
+            <a href="#" aria-label="Instagram">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 3h10a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V7a4 4 0 0 1 4-4zm5 5.5A4.5 4.5 0 1 0 16.5 13 4.5 4.5 0 0 0 12 8.5zm6-1.7a1 1 0 1 0 1 1 1 1 0 0 0-1-1z" />
+              </svg>
+            </a>
+          </div>
+        </div>
+        <div class="footer-links">
+          <div>
+            <h4 data-i18n="footer_quick">Quick links</h4>
+            <a href="#features" data-i18n="footer_features">Features</a>
+            <a href="#about" data-i18n="footer_about">About</a>
+            <a href="#contact" data-i18n="footer_contact">Contact</a>
+          </div>
+          <div>
+            <h4 data-i18n="footer_platform">Platform</h4>
+            <a href="{{ url_for('help_page') }}" data-i18n="footer_help">Help Center</a>
+            <a href="{{ url_for('buyer_marketplace') }}" data-i18n="footer_marketplace">Buyer Marketplace</a>
+          </div>
+          <div>
+            <h4 data-i18n="footer_support">Support</h4>
+            <a href="{{ url_for('help_page') }}" data-i18n="footer_support_center">Support Center</a>
+            <a href="{{ url_for('notifications_hub') }}" data-i18n="footer_notifications">Notifications</a>
+            <a href="#contact" data-i18n="footer_contact_us">Contact Us</a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>(c) <span id="year"></span> <span data-i18n="footer_rights">AgriMove AI. All rights reserved.</span></p>
+      </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
