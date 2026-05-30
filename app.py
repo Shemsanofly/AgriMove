@@ -2771,65 +2771,7 @@ def setup_demo():
         return jsonify({"success": False, "message": str(e), "data": {}}), 500
 
 
-# ============== FEATURE A: FLOATING CHATBOT (Smartphone Users) ==============
-
-from services.chatbot import get_ai_response, text_to_swahili_audio
-from gtts import gTTS
-import uuid
-
-@app.route('/api/chat', methods=['POST'])
-def ai_chat():
-    data = request.get_json()
-    user_message = data.get('message', '')
-    
-    # Get current prices from DB to give AI context
-    try:
-        conn = get_db_connection()
-        prices = conn.execute("SELECT crop_name, region, price FROM market_prices").fetchall()
-        price_list = [f"- {row['crop_name']} in {row['region']}: TSh {row['price']}" for row in prices]
-        prices_context = "\n".join(price_list)
-        conn.close()
-    except Exception as e:
-        prices_context = "Prices currently unavailable."
-        
-    # Get response from Google Gemini Chatbot Service
-    reply = get_ai_response(user_message)
-    
-    # Convert reply to audio using service helper
-    audio_url = text_to_swahili_audio(reply)
-        
-    return jsonify({
-        "success": True,
-        "reply": reply,
-        "audio_url": audio_url
-    })
-
-
-
-@app.route('/api/voice/speak', methods=['POST'])
-def voice_speak():
-    data = request.get_json()
-    text = data.get('text', '')
-    if not text:
-        return jsonify({"success": False, "error": "No text provided"}), 400
-        
-    try:
-        audio_filename = f"speak_{uuid.uuid4().hex[:8]}.mp3"
-        os.makedirs("static/audio", exist_ok=True)
-        tts = gTTS(text=text, lang='sw', slow=False)
-        tts.save(f"static/audio/{audio_filename}")
-        audio_url = f"/static/audio/{audio_filename}"
-    except Exception as e:
-        print(f"TTS speak Error: {e}")
-        return jsonify({"success": False, "error": str(e)}), 500
-        
-    return jsonify({
-        "success": True,
-        "audio_url": audio_url
-    })
-
-
-# ============== FEATURE B: IVR VOICE (Feature Phones / 2G / No Internet) ==============
+# ============== IVR VOICE — Africa's Talking (Feature Phones / 2G / No Internet) ==============
 
 def save_transport_callback(phone):
     """Save caller number for transport callback"""
