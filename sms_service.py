@@ -398,3 +398,54 @@ def farmer_transport_sms(lang, request_id, name, pickup, destination, goods_type
         f"Searching for a driver. Load: {quantity} {goods_type}. "
         f"{pickup} to {destination}. You will receive SMS when a driver is matched."
     )
+
+
+def payment_escrow_farmer_sms(lang, amount_tzs, buyer_name, ref):
+    amount = f"{int(amount_tzs):,}"
+    if lang == "sw":
+        return (
+            f"AgriMove Malipo Salama: TSh {amount} kutoka kwa {buyer_name} "
+            f"imepokelewa na kuwekwa dhamana. Ref: {ref}."
+        )
+    return (
+        f"AgriMove Secure Pay: TSh {amount} from {buyer_name} "
+        f"received and held in escrow. Ref: {ref}."
+    )
+
+
+def payment_escrow_buyer_sms(lang, amount_tzs, farmer_name, ref):
+    amount = f"{int(amount_tzs):,}"
+    if lang == "sw":
+        return (
+            f"AgriMove Malipo Salama: Malipo yako ya TSh {amount} kwa {farmer_name} "
+            f"yamewekwa dhamana salama. Ref: {ref}."
+        )
+    return (
+        f"AgriMove Secure Pay: Your payment of TSh {amount} to {farmer_name} "
+        f"is secured in escrow. Ref: {ref}."
+    )
+
+
+def payment_release_farmer_sms(lang, amount_tzs, ref):
+    amount = f"{int(amount_tzs):,}"
+    if lang == "sw":
+        return (
+            f"AgriMove Malipo Salama: TSh {amount} zimeachiwa kutoka dhamana "
+            f"na kutumwa kwenye M-Pesa yako. Ref: {ref}."
+        )
+    return (
+        f"AgriMove Secure Pay: TSh {amount} released from escrow to your M-Pesa. Ref: {ref}."
+    )
+
+
+def payment_release_buyer_sms(lang, amount_tzs, farmer_name, ref):
+    amount = f"{int(amount_tzs):,}"
+    if lang == "sw":
+        return (
+            f"AgriMove Malipo Salama: Malipo ya TSh {amount} kwa {farmer_name} "
+            f"imekamilika na kutolewa kutoka dhamana. Ref: {ref}."
+        )
+    return (
+        f"AgriMove Secure Pay: Payment of TSh {amount} to {farmer_name} "
+        f"completed and released from escrow. Ref: {ref}."
+    )

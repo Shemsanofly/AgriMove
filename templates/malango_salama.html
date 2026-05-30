@@ -15,6 +15,26 @@
         </div>
     </div>
 
+    {% if not at_sms_status.credentials_valid %}
+    <div style="background:#fdecea;border:1px solid #c62828;border-radius:10px;padding:12px 14px;margin-bottom:20px;font-size:0.88rem;line-height:1.5;color:#7f1d1d;">
+        <strong>SMS API key not accepted by Africa's Talking (401)</strong>
+        <p style="margin:8px 0 0;">Update <code>AT_API_KEY</code> in <code>.env</code> from
+            <a href="https://account.africastalking.com/apps/sandbox" target="_blank" rel="noopener">Sandbox Settings</a>,
+            then restart the app.</p>
+    </div>
+    {% endif %}
+    <div style="background:#e8f5e9;border:1px solid #2f7d32;border-radius:10px;padding:12px 14px;margin-bottom:24px;font-size:0.88rem;line-height:1.5;">
+        <strong>📱 Arifa za SMS kupitia Africa's Talking Sandbox</strong>
+        <p style="margin:8px 0 6px;">Malipo yanapokamilika, mfumo hutuma SMS kwa mkulima na mnunuzi kupitia sandbox (si arifa ya tovuti).</p>
+        <p style="margin:0 0 4px;color:#1b5e20;">1. Sajili namba yako kwenye sandbox ya AT.</p>
+        <p style="margin:0 0 8px;color:#1b5e20;">2. Tumia namba hiyo hiyo (+255...) kwenye fomu ya malipo.</p>
+        <p style="margin:10px 0 0;display:flex;flex-wrap:wrap;gap:10px;">
+            <a href="{{ at_sms_status.register_phone_url }}" target="_blank" rel="noopener noreferrer" style="color:#1b5e20;font-weight:700;">Register phone</a>
+            <a href="{{ at_sms_status.sandbox_outbox_url }}" target="_blank" rel="noopener noreferrer" style="color:#1b5e20;font-weight:700;">SMS Outbox</a>
+            <a href="{{ at_sms_status.simulator_url }}" target="_blank" rel="noopener noreferrer" style="color:#1b5e20;font-weight:700;">Simulator (:1517)</a>
+        </p>
+    </div>
+
     <!-- Main Payment Flow Grid -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 30px; align-items: start;">
         
@@ -141,13 +161,14 @@
                     <div>HALI: <span style="background: var(--green); color: white; padding: 1px 6px; border-radius: 4px; font-weight: 700; font-size: 0.7rem;">ESCROWED</span></div>
                 </div>
 
-                <!-- Copy SMS button -->
-                <div class="form-group" style="margin-bottom: 16px;">
-                    <label style="font-size: 0.8rem; color: var(--muted); text-transform: uppercase; font-weight: 700;">Nakili SMS ya Uthibitisho ya Wakulima:</label>
-                    <textarea id="copySmsText" readonly rows="4" style="background: rgba(0,0,0,0.03); font-size: 0.85rem; padding: 10px; width: 100%; border: 1px solid rgba(0,0,0,0.1); border-radius: 8px; resize: none;"></textarea>
-                    <button onclick="copySMS()" class="btn btn-outline" style="margin-top: 8px; width: 100%; border-radius: 8px; padding: 8px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
-                        📋 Nakili Ujumbe (Copy)
-                    </button>
+                <!-- SMS sent via AT sandbox -->
+                <div id="receiptSmsStatus" style="background:#e8f5e9;border:1px solid #2f7d32;border-radius:10px;padding:14px;margin-bottom:16px;font-size:0.88rem;line-height:1.5;">
+                    <strong style="color:#1b5e20;">📱 SMS imetumwa kupitia Africa's Talking</strong>
+                    <p id="receiptFarmerSms" style="margin:8px 0 4px;color:#2e7d32;"></p>
+                    <p id="receiptBuyerSms" style="margin:0 0 8px;color:#2e7d32;"></p>
+                    <p style="margin:0;font-size:0.82rem;color:#5d4037;">Soma ujumbe kwenye
+                        <a href="{{ at_sms_status.sandbox_outbox_url }}" target="_blank" rel="noopener noreferrer" style="color:#1b5e20;font-weight:700;">SMS Outbox</a>
+                        ya sandbox.</p>
                 </div>
 
                 <button onclick="resetWizard()" class="btn btn-ghost" style="width: 100%; border-radius: 8px; padding: 12px; font-size: 0.9rem; cursor: pointer;">
@@ -215,6 +236,26 @@
 <script>
     let activeTotal = 0;
 
+    function formatSmsLine(label, sms) {
+        if (!sms) return `${label}: —`;
+        if (sms.sent) {
+            return `✅ ${label}: SMS imetumwa kwa ${sms.phone}`;
+        }
+        if (sms.auth_failed) {
+            return `⚠️ ${label}: Ufunguo wa API umekataliwa — angalia .env`;
+        }
+        return `❌ ${label}: Imeshindikana (${sms.error || 'hitilafu'})`;
+    }
+
+    function showReleaseSmsNotice(farmerSms, buyerSms) {
+        const lines = [
+            formatSmsLine('Mkulima', farmerSms),
+            formatSmsLine('Mnunuzi', buyerSms),
+            "Soma ujumbe kwenye SMS Outbox ya Africa's Talking sandbox."
+        ].join('\n');
+        alert("Malipo yameachiwa kikamilifu!\n\n" + lines);
+    }
+
     function calculateTotal() {
         const qty = parseFloat(document.getElementById('quantity_kg').value) || 0;
         const price = parseFloat(document.getElementById('price_per_kg').value) || 0;
@@ -269,23 +310,16 @@
         .then(res => res.json())
         .then(res => {
             if (res.success) {
-                // Load receipt values
                 document.getElementById('receiptRef').textContent = res.data.mpesa_reference;
                 document.getElementById('receiptBuyer').textContent = payload.buyer_name;
                 document.getElementById('receiptFarmer').textContent = payload.farmer_name;
                 document.getElementById('receiptAmt').textContent = payload.amount_tzs.toLocaleString() + " TSh";
-                document.getElementById('copySmsText').value = res.data.sms_text;
-                
-                // Switch wizard to receipt screen
+                document.getElementById('receiptFarmerSms').textContent = formatSmsLine('Mkulima', res.data.farmer_sms);
+                document.getElementById('receiptBuyerSms').textContent = formatSmsLine('Mnunuzi', res.data.buyer_sms);
+
                 document.getElementById('escrowFormStep2').style.display = 'none';
                 document.getElementById('escrowReceipt').style.display = 'block';
-                
-                // Show dynamic standard toast
-                if (window.showSmsToast) {
-                    window.showSmsToast(payload.buyer_phone, res.data.sms_text);
-                }
 
-                // Add to list dynamically at top
                 addNewTransactionToList({
                     id: res.data.transaction_id,
                     crop_type: payload.crop_type,
@@ -319,13 +353,6 @@
         document.getElementById('step2-header').style.borderBottom = 'none';
     }
 
-    function copySMS() {
-        const txt = document.getElementById('copySmsText');
-        txt.select();
-        document.execCommand('copy');
-        alert("Ujumbe wa SMS umenakiliwa! Sasa unaweza kuutuma kwa mkulima.");
-    }
-
     function confirmEscrowRelease(txId) {
         if (!confirm("Je, una uhakika wa kuachia malipo haya kwenda kwa mkulima? Hakikisha mzigo umefika salama sokoni.")) {
             return;
@@ -339,9 +366,8 @@
         .then(res => res.json())
         .then(res => {
             if (res.success) {
-                alert("Malipo yameachiwa kikamilifu!");
-                
-                // Update list styling dynamically
+                showReleaseSmsNotice(res.data.farmer_sms, res.data.buyer_sms);
+
                 const badge = document.getElementById(`tx-status-${txId}`);
                 if (badge) {
                     badge.textContent = "🔓 IMETOLEWA (Released)";
@@ -353,11 +379,6 @@
                 const btn = document.getElementById(`release-btn-${txId}`);
                 if (btn) {
                     btn.remove();
-                }
-
-                // Show toast with release verification SMS
-                if (window.showSmsToast) {
-                    window.showSmsToast("M-PESA", res.data.sms_text);
                 }
             } else {
                 alert("Hitilafu ya kuachia malipo: " + res.message);

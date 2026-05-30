@@ -16,6 +16,10 @@ from sms_service import (
     farmer_transport_sms,
     init_sms_client,
     normalize_phone,
+    payment_escrow_buyer_sms,
+    payment_escrow_farmer_sms,
+    payment_release_buyer_sms,
+    payment_release_farmer_sms,
     send_sms,
     sms_status,
     verify_at_credentials,
@@ -1114,27 +1118,37 @@ def api_payment_initiate():
             (buyer_name, buyer_phone, farmer_name, farmer_phone, crop_type, quantity_kg, amount_tzs, ref, 'escrowed', datetime.now().isoformat())
         )
         tx_id = cursor.lastrowid
-        
-        # Log simulated notification
-        msg = f"MALIPO SALAMA: TSh {amount_tzs:,} kutoka kwa {buyer_name} yamepokelewa na kuwekwa dhamana (Escrow) kwa ajili ya {farmer_name}. Ref: {ref}."
-        create_notification(conn, msg, None, "success")
-        
-        # Trigger SMS notification to farmer
-        sms_msg = f"AgriMove: Malipo ya TSh {amount_tzs:,} kutoka kwa Mnunuzi {buyer_name} yamepokelewa salama kwenye mfuko wa dhamana. Ref: {ref}. Yatatumwa kwako punde utakapothibitisha mzigo kupokelewa."
-        dispatch_notification(conn, sms_msg)
-        
+
+        lang = get_lang()
+        farmer_msg = payment_escrow_farmer_sms(lang, amount_tzs, buyer_name, ref)
+        buyer_msg = payment_escrow_buyer_sms(lang, amount_tzs, farmer_name, ref)
+
+        farmer_sms = send_sms(farmer_phone, farmer_msg, conn=conn)
+        buyer_sms = send_sms(buyer_phone, buyer_msg, conn=conn)
+
         conn.commit()
         conn.close()
-        
+
         return jsonify({
             "success": True,
             "data": {
                 "transaction_id": tx_id,
                 "mpesa_reference": ref,
                 "status": "escrowed",
-                "sms_text": sms_msg
+                "farmer_sms": {
+                    "sent": bool(farmer_sms.get("success")),
+                    "phone": farmer_sms.get("phone", normalize_phone(farmer_phone)),
+                    "auth_failed": bool(farmer_sms.get("auth_failed")),
+                    "error": farmer_sms.get("error"),
+                },
+                "buyer_sms": {
+                    "sent": bool(buyer_sms.get("success")),
+                    "phone": buyer_sms.get("phone", normalize_phone(buyer_phone)),
+                    "auth_failed": bool(buyer_sms.get("auth_failed")),
+                    "error": buyer_sms.get("error"),
+                },
             },
-            "message": "Malipo yamewekwa dhamana (Escrow) kwa ufanisi!"
+            "message": t("payment_escrow_success"),
         })
     except Exception as e:
         return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
@@ -1159,26 +1173,38 @@ def api_payment_confirm():
             "UPDATE transactions SET status = 'released' WHERE id = ?",
             (tx_id,)
         )
-        
-        # Log notification
-        msg = f"MALIPO SALAMA: Pesa TSh {tx['amount_tzs']:,} zimeachiwa kwa mkulima {tx['farmer_name']}. Ref: {tx['mpesa_reference']}."
-        create_notification(conn, msg, None, "success")
-        
-        # Trigger SMS to farmer
-        sms_msg = f"AgriMove: Malipo ya dhamana ya TSh {tx['amount_tzs']:,} yameachiwa na mnunuzi na kutumwa kwenye namba yako ya M-Pesa. Ref: {tx['mpesa_reference']}."
-        dispatch_notification(conn, sms_msg)
-        
+
+        lang = get_lang()
+        amount = tx["amount_tzs"]
+        ref = tx["mpesa_reference"]
+        farmer_msg = payment_release_farmer_sms(lang, amount, ref)
+        buyer_msg = payment_release_buyer_sms(lang, amount, tx["farmer_name"], ref)
+
+        farmer_sms = send_sms(tx["farmer_phone"], farmer_msg, conn=conn)
+        buyer_sms = send_sms(tx["buyer_phone"], buyer_msg, conn=conn)
+
         conn.commit()
         conn.close()
-        
+
         return jsonify({
             "success": True,
             "data": {
                 "transaction_id": tx_id,
                 "status": "released",
-                "sms_text": sms_msg
+                "farmer_sms": {
+                    "sent": bool(farmer_sms.get("success")),
+                    "phone": farmer_sms.get("phone", normalize_phone(tx["farmer_phone"])),
+                    "auth_failed": bool(farmer_sms.get("auth_failed")),
+                    "error": farmer_sms.get("error"),
+                },
+                "buyer_sms": {
+                    "sent": bool(buyer_sms.get("success")),
+                    "phone": buyer_sms.get("phone", normalize_phone(tx["buyer_phone"])),
+                    "auth_failed": bool(buyer_sms.get("auth_failed")),
+                    "error": buyer_sms.get("error"),
+                },
             },
-            "message": "Gharama zimelipwa kwa mkulima na muamala umekamilika!"
+            "message": t("payment_release_success"),
         })
     except Exception as e:
         return jsonify({"success": False, "data": None, "message": f"Hitilafu: {str(e)}"}), 500
@@ -1208,7 +1234,8 @@ def payments_page():
             transactions=transactions,
             active="payments",
             heading="Malango Salama",
-            subheading="Lipa na upokee malipo salama kwa kutumia M-Pesa Escrow bila hofu ya kupoteza fedha."
+            subheading="Lipa na upokee malipo salama kwa kutumia M-Pesa Escrow bila hofu ya kupoteza fedha.",
+            at_sms_status=sms_status,
         )
     except Exception as e:
         return render_template(
@@ -1217,7 +1244,8 @@ def payments_page():
             error=str(e),
             active="payments",
             heading="Malango Salama",
-            subheading="Lipa na upokee malipo salama."
+            subheading="Lipa na upokee malipo salama.",
+            at_sms_status=sms_status,
         )
 
 
